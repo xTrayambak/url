@@ -68,17 +68,17 @@ func trimC0Whitespace*(input: var Input) {.raises: [].} =
   while input.len > 0 and input[input.len - 1].isC0ControlOrSpace:
     input = input[0 ..< input.len - 1]
 
-func isAlnumPlus*(c: uint8 | char): bool {.inline, raises: [].} =
+func isAlnumPlus*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
   cast[char](c) in AlnumPlus
 
-func isAsciiHexDigit*(c: uint8 | char): bool {.inline, raises: [].} =
+func isAsciiHexDigit*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
   (c >= '0' and c <= '9') or (c >= 'A' and c <= 'F') or (c >= 'a' and c <= 'f')
 
-proc pruneFragment*(input: var Input): Option[string] {.raises: [].} =
+proc pruneFragment*(input: var Input): Option[string] {.raises: [], cdecl.} =
   # This should be fairly fast since it uses Kaleidoscope.
   # That'll use AVX2 or SSE4.1 when possible, and fall back
   # to a scalar implementation on other platforms.
-  let locationOfFirst = input.find("#")
+  let locationOfFirst = search.find(input, "#")
   if locationOfFirst == -1:
     return none(string)
 
@@ -101,15 +101,76 @@ func findAuthorityDelimiter*(view: string): uint64 {.raises: [].} =
 
   uint64(view.len)
 
-func findNextHostDelimiterSpecial*(view: string, location: uint64): uint64 =
-  # TODO: Implement AVX2/SSE4.1/NEON variants
-  # For now, this table approach should suffice.
-  let str = view[location ..< view.len]
-  for pos, c in str:
-    if SpecialHostDelimiters[cast[uint8](c)] == 1:
-      return uint64(pos) + location
+when defined(nimUrlUseSse2):
+  import std/bitops
+  import pkg/nimsimd/sse2
 
-  uint64(view.len)
+  func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
+
+  func findNextHostDelimiterSpecial*(view: string, location: uint64): uint64 =
+    # First check for short strings in which case we do it naively.
+    let size = uint64(view.len)
+    if size - location < 16:
+      # Slow path
+      for i in location ..< size:
+        if view[i] == ':' or view[i] == '/' or view[i] == '\\' or view[i] == '?' or
+            view[i] == '[':
+          return uint64(i)
+
+      return size
+
+    # Fast path for longer strings
+    var i = location
+    let
+      mask1 = mm_set1_epi8(':')
+      mask2 = mm_set1_epi8('/')
+      mask3 = mm_set1_epi8('\\')
+      mask4 = mm_set1_epi8('?')
+      mask5 = mm_set1_epi8('[')
+
+    while i + 15 < size:
+      let
+        word = mm_loadu_si128(cast[ptr M128i](view[i].addr))
+        m1 = mm_cmpeq_epi8(word, mask1)
+        m2 = mm_cmpeq_epi8(word, mask2)
+        m3 = mm_cmpeq_epi8(word, mask3)
+        m4 = mm_cmpeq_epi8(word, mask4)
+        m5 = mm_cmpeq_epi8(word, mask5)
+
+        m = mm_or_si128(mm_or_si128(mm_or_si128(m1, m2), mm_or_si128(m3, m4)), m5)
+
+      let mask: int32 = mm_movemask_epi8(m)
+      if mask != 0:
+        return i + uint64(builtin_ctzl(cast[uint64](mask)))
+
+      i += 16
+
+    if i < size:
+      let
+        word = mm_loadu_si128(cast[ptr M128i](view[size - 16].addr))
+        m1 = mm_cmpeq_epi8(word, mask1)
+        m2 = mm_cmpeq_epi8(word, mask2)
+        m3 = mm_cmpeq_epi8(word, mask3)
+        m4 = mm_cmpeq_epi8(word, mask4)
+        m5 = mm_cmpeq_epi8(word, mask5)
+
+        m = mm_or_si128(mm_or_si128(mm_or_si128(m1, m2), mm_or_si128(m3, m4)), m5)
+
+      let mask: int32 = mm_movemask_epi8(m)
+      if mask != 0:
+        return size - 16 + uint64(builtin_ctzl(cast[uint64](mask)))
+
+    size
+else:
+  func findNextHostDelimiterSpecial*(view: string, location: uint64): uint64 =
+    # TODO: Implement AVX2/SSE4.1/NEON variants
+    # For now, this table approach should suffice.
+    let str = view[location ..< view.len]
+    for pos, c in str:
+      if SpecialHostDelimiters[cast[uint8](c)] == 1:
+        return uint64(pos) + location
+
+    uint64(view.len)
 
 func getHostDelimiterFunction*(
     isSpecial: bool, view: string

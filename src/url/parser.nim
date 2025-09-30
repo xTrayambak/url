@@ -224,7 +224,6 @@ proc parseURLImpl*(
       var hostView = urlData[inputPosition ..< urlData.len]
       let (location, foundColon) =
         getHostDelimiterFunction(url.specialScheme.isSpecial(), hostView)
-
       hostView = hostView[0 ..< location]
 
       inputPosition =
@@ -232,10 +231,6 @@ proc parseURLImpl*(
           inputPosition + location
         else:
           size
-
-      # echo "hostView: " & hostView
-      # echo "location: " & $location
-      # echo "foundColon: " & $foundColon
 
       # Otherwise, if c is U+003A (:) and insideBrackets is false, then:
       if foundColon:
@@ -351,7 +346,6 @@ proc parseURLImpl*(
       if view.endsWith(' '):
         let modifiedView = view[0 ..< view.len] & "%20"
     else:
-      echo state
       break
 
   ok(ensureMove(url))

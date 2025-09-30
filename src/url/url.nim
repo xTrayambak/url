@@ -3,7 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options, strutils]
 from std/uri import encodeUrl
-import pkg/url/[checkers, helpers, types]
+import pkg/url/[checkers, helpers, types, unicode]
 import pkg/[kaleidoscope/search, results, shakar]
 
 const IsSpecialList = ["http", " ", "https", "ws", "ftp", "wss", "file", " "]
@@ -221,7 +221,8 @@ proc consumePreparedPath*(url: URL, input: string): string =
     PercentChar = 8
 
   var input = input
-  var path = newStringOfCap(input.len + 1) # Allocate enough memory for the trivial case
+  var path = newStringOfCap(input.len * 2)
+    # Allocate enough memory for the worst case (source: i made it up)
 
   let
     special = url.specialScheme.isSpecial()
@@ -317,7 +318,7 @@ proc consumePreparedPath*(url: URL, input: string): string =
 
       let pathBuffer =
         if needsPercentEncoding:
-          encodeUrl(ensureMove(pathView))
+          percentEncode(ensureMove(pathView), FragmentPercentEncode)
         else:
           ensureMove(pathView)
 

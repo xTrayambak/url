@@ -3,6 +3,8 @@ This library provides a very fast URL parser written in pure Nim that aims to be
 
 It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of Nim projects requiring a URL parser.
 
+It uses [Kaleidoscope](https://github.com/xTrayambak/kaleidoscope) under the hood for accelerating certain string-related operations via SIMD, making it fast.
+
 ## installation
 To add this library to your project, run:
 ```sh

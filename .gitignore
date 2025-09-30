@@ -3,3 +3,4 @@
 !*/
 !LICENSE
 tests/wpt/*
+bench/urls.txt
