@@ -1,0 +1,37 @@
+import std/unittest
+import pkg/[shakar, url, pretty]
+
+suite "basic URL parsing tests":
+  test "the cakewalk urls":
+    let url1 = parseURL("https://google.com")
+
+    check(&url1.hostname == "google.com")
+    check(url1.scheme == "https")
+    check(!url1.port)
+    check(url1.path.len == 0)
+
+    let url2 = parseURL("http://xtrayambak.xyz/entries/madhyasthal-dce")
+
+    check(&url2.hostname == "xtrayambak.xyz")
+    check(url2.scheme == "http")
+    check(!url2.port)
+    check(url2.pathname == "/entries/madhyasthal-dce")
+
+  test "empty url string should return error":
+    expect URLParsingError:
+      let url1 = parseURL(newString(0))
+
+  test "opaque path":
+    let url1 = parseURL("mailto:me@xtrayambak.xyz")
+
+    check(url1.pathname == "")
+    check(url1.hasOpaquePath)
+
+  # Do not put any tests below it, because it'll be very slow
+  # and you won't see the results instantly!
+  test "huge/forbidden length URLs (4GB+)":
+    var buff = newString(uint32.high.uint64 + 1'u64)
+      # Allocate a 4GB + 1 byte buffer. This takes a bit (no pun intended) to fully allocate.
+
+    expect URLParsingError:
+      let url1 = parseURL(buff)
