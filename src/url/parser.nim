@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[importutils, options, strutils]
-import pkg/url/[constants, helpers, types, url]
+import pkg/url/[constants, helpers, types, url, unicode]
 import pkg/[kaleidoscope/search, results, shakar]
 
 const
@@ -346,6 +346,9 @@ proc parseURLImpl*(
       # to optimize it.
       if view.endsWith(' '):
         let modifiedView = view[0 ..< view.len] & "%20"
+        url.pathname = percentEncode(modifiedView, C0ControlPercentEncode)
+      else:
+        url.pathname = percentEncode(view, C0ControlPercentEncode)
     else:
       break
 

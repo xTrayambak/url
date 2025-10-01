@@ -24,7 +24,7 @@ suite "basic URL parsing tests":
   test "opaque path":
     let url1 = parseURL("mailto:me@xtrayambak.xyz")
 
-    check(url1.pathname == "")
+    check(url1.pathname == "me@xtrayambak.xyz")
     check(url1.hasOpaquePath)
 
   # Do not put any tests below it, because it'll be very slow
