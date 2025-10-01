@@ -20,7 +20,9 @@ type URLParsingError* = object of ValueError
   ## Currently, specialized exceptions do not exist. They will
   ## be added in the future.
 
-proc tryParseURL*(source: Input): Result[URL, ParseError] =
+proc tryParseURL*(
+    source: Input, baseUrl: Option[URL] = none(URL)
+): Result[URL, ParseError] =
   ## Given a URL string (`source`), parse it using the WHATWG URL specifications parsing algorithm,
   ## to try and produce a valid URL representation.
   ##
@@ -28,9 +30,11 @@ proc tryParseURL*(source: Input): Result[URL, ParseError] =
   ## Result. Otherwise, the `ParseError` can be obtained to understand why the parse was unsuccessful.
   ##
   ## **Algorithm**: https://url.spec.whatwg.org/#url-parsing
-  parseURLImpl(input = source, baseUrl = none(URL))
+  parseURLImpl(input = source, baseUrl = baseUrl)
 
-proc parseURL*(source: Input): URL {.raises: [URLParsingError, ValueError].} =
+proc parseURL*(
+    source: Input, baseUrl: Option[URL] = none(URL)
+): URL {.raises: [URLParsingError, ValueError].} =
   ## Given a URL string (`source`), parse it using the WHATWG URL specifications parsing algorithm,
   ## to try and produce a valid URL representation.
   ## 
@@ -38,7 +42,7 @@ proc parseURL*(source: Input): URL {.raises: [URLParsingError, ValueError].} =
   ## If parsing is unsuccessful, a `URLParsingError` is thrown, which can be caught by the programmer.
   ##
   ## **Algorithm**: https://url.spec.whatwg.org/#url-parsing
-  let parsed = tryParseURL(source = source)
+  let parsed = tryParseURL(source = source, baseUrl = baseUrl)
   if !parsed:
     raise newException(URLParsingError, $parsed.error())
 

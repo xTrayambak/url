@@ -50,3 +50,6 @@ func isWindowsDriveLetter*(input: string): bool {.inline.} =
     (input.len == 2) or
     (input[2] == '/' or input[2] == '\\' or input[2] == '?' or input[2] == '#')
   )
+
+func isNormalizedWindowsDriveLetter*(input: string): bool {.inline.} =
+  input.len >= 2 and isAlphaAscii(input[0]) and input[1] == ':'

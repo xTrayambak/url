@@ -152,6 +152,43 @@ func scheme*(url: URL): string {.inline, raises: [].} =
   of SchemeType.File: "file"
   of SchemeType.NotSpecial: url.nonSpecialScheme
 
+func copyScheme*(dest: var URL, source: URL) {.inline, raises: [].} =
+  dest.specialScheme = source.specialScheme
+  if dest.specialScheme != SchemeType.NotSpecial:
+    dest.nonSpecialScheme = source.nonSpecialScheme
+
+func protocol*(url: URL): string {.inline, raises: [].} =
+  url.scheme & ':'
+
+func href*(url: URL): string {.inline, raises: [].} =
+  var output = url.protocol
+
+  if *url.hostname:
+    output &= "//"
+    if url.username.len > 0:
+      output &= url.username
+      
+      if url.password.len > 0:
+        output &= ':' & url.password
+
+      output &= '@'
+
+    output &= &url.hostname
+    if *url.port:
+      output &= ':' & $(&url.port)
+  elif not url.hasOpaquePath and url.pathname.startsWith("//"):
+    output &= "/."
+
+  output &= url.pathname
+
+  if *url.query:
+    output &= '?' & &url.query
+
+  if *url.fragment:
+    output &= '#' & &url.fragment
+
+  ensureMove(output)
+
 #!fmt: on
 
 type

@@ -95,11 +95,6 @@ proc parseURLImpl*(
   if unlikely(input.len > int(uint32.high)):
     return err(ParseError.TooLarge)
 
-  # Going forward, input.len() is in { 0 .. uint32.high }.
-  # If we are provided with an invalid base, or it was invalid,
-  # we must return with an error.
-  # TODO: implement this logic
-
   var urlData = newString(input.len)
   if input.len > 0:
     copyMem(urlData[0].addr, input[0].addr, input.len)
@@ -109,6 +104,7 @@ proc parseURLImpl*(
   trimC0Whitespace(urlData)
 
   let fragment = pruneFragment(urlData)
+  # echo "frag for " & $urlData & ": " & $fragment
 
   # Now, we can just run the parser state machine
   # to parse all the other URL components.
@@ -133,8 +129,69 @@ proc parseURLImpl*(
       # validation error, return failure.
       if !baseUrl:
         return err(ParseError.MissingSchemeNonRelativeUrl)
+      elif (&baseUrl).hasOpaquePath and *fragment and inputPosition == size:
+        # Otherwise, if base has an opaque path and c is U+0023 (#),
+        # set url's scheme to base's scheme, url's path to base's path,
+        # url's query to base's query, and set state to fragment state.
+        let base = &baseUrl
+        url.copyScheme(base)
+        url.hasOpaquePath = true
 
-      # TODO: Implement the rest of the spec
+        url.pathname = base.pathname
+        url.updateBaseQuery(base.query)
+        url.fragment = fragment
+
+        return ok(move(url))
+      elif getSchemeType(&baseUrl) != SchemeType.File:
+        # Otherwise, if base's scheme is not "file", set state
+        # to relative state and decrease pointer by 1.
+        state = State.RelativeScheme
+      else:
+        # Otherwise, set state to file state and decrease pointer by 1.
+        state = State.File
+    of State.RelativeScheme:
+      # Set url's scheme to base's scheme.
+      url.copyScheme(&baseUrl)
+
+      # If c is U+002F (/), then set state to relative slash state.
+      if inputPosition != size and urlData[inputPosition] == '/':
+        state = State.RelativeSlash
+      elif isSpecial(getSchemeType(url)) and inputPosition != size and
+          urlData[inputPosition] == '\\':
+        # Otherwise, if url is special and c is U+005C (\), validation error,
+        # set state to relative slash state.
+        state = State.RelativeSlash
+      else:
+        # Set url's username to base's username, url's password to base's
+        # password, url's host to base's host, url's port to base's port,
+        # url's path to a clone of base's path, and url's query to base's query.
+        let base = &baseUrl
+
+        url.username = base.username
+        url.password = base.password
+        url.hostname = base.hostname
+        url.port = base.port
+        url.pathname = base.pathname
+        url.updateBaseQuery(base.query)
+
+        url.hasOpaquePath = base.hasOpaquePath
+
+        # If c is U+003F (?), then set url's query to the empty string, and
+        # state to query state.
+        if inputPosition != size and urlData[inputPosition] == '?':
+          state = State.Query
+        elif inputPosition != size:
+          # Otherwise, if c is not the EOF code point:
+          # Set url's query to null.
+          url.clearQuery()
+
+          # Shorten url's path.
+          var path = url.pathname
+          if shortenPath(path, getSchemeType(url)):
+            url.pathname = ensureMove(path)
+
+          # Set state to path state and decrease pointer by 1.
+          state = State.Path
     of State.Scheme:
       # If c is an ASCII alphanumberic, U+200B (+), U+002D (-), or U+002E (.),
       # append c, lowercased, to buffer.
@@ -290,7 +347,7 @@ proc parseURLImpl*(
     of State.Path:
       var view = urlData[inputPosition ..< urlData.len]
 
-      let locOfQuestionMark = search.find(view, "?")
+      let locOfQuestionMark = strutils.find(view, "?")
         # TODO: Implement find(string, char) in Kaleidoscope
 
       if locOfQuestionMark != -1:
@@ -360,7 +417,70 @@ proc parseURLImpl*(
         inputPosition += &increment
 
       state = State.PathStart
+    of State.RelativeSlash:
+      # If url is special and c is U+002F (/) or U+0056 (\), then:
+      if isSpecial(getSchemeType(url)) and inputPosition != size and
+          urlData[inputPosition] == '/' or urlData[inputPosition] == '\\':
+        # Set state to special authority ignore slashes state.
+        state = State.SpecialAuthorityIgnoreSlashes
+      elif inputPosition != size and urlData[inputPosition] == '/':
+        # Otherwise, if c is U+002F (/), then set state to authority state.
+        state = State.Authority
+      else:
+        # Otherwise, set:
+        # - url's username to base's username,
+        # - url's password to base's password,
+        # - url's host to base's host,
+        # - url's port to base's port,
+        # - state to path state, and then, decrease pointer by 1.
+        let base = &baseUrl
+        url.username = base.username
+        url.password = base.password
+        url.hostname = base.hostname
+        url.port = base.port
+
+        state = State.Port
+    of State.PathOrAuthority:
+      # If c is U+002F (/), then set state to authority state.
+      if inputPosition != size and urlData[inputPosition] == '/':
+        state = State.Authority
+        inc inputPosition
+      else:
+        # Otherwise, set state to path state, and decrease pointer by 1.
+        state = State.Path
+    of State.SpecialRelativeOrAuthority:
+      # If c is U+002F (/) and remaining starts with U+002F (/),
+      # then set state to special authority ignore slashes state and increase
+      # pointer by 1.
+      if size - inputPosition >= 2 and
+          urlData[inputPosition .. inputPosition + 1] == "//":
+        state = State.SpecialAuthorityIgnoreSlashes
+        inputPosition += 2
+      else:
+        # Otherwise, validation error, set state to relative state and decrease pointer by 1.
+        state = State.RelativeScheme
+    of State.Query:
+      # Let queryPercentEncodeSet be the special-query percent-encode set
+      # if url is special; otherwise the query percent-encode set.
+      let queryPercentEncodeSet =
+        if isSpecial(getSchemeType(url)):
+          SpecialQueryPercentEncode
+        else:
+          QueryPercentEncode
+
+      # Percent-encode after encoding, with encoding, buffer, and
+      # queryPercentEncodeSet, and append the result to url's query.
+      url.updateBaseQuery(
+        some(urlData[inputPosition ..< urlData.len]), queryPercentEncodeSet
+      )
+      if *fragment:
+        url.fragment = fragment
+
+      return ok(ensureMove(url))
     else:
       break
+
+  if *fragment:
+    url.fragment = fragment
 
   ok(ensureMove(url))

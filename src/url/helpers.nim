@@ -2,8 +2,8 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, options]
-from std/strutils import Letters, Digits
-import pkg/url/[constants, types]
+from std/strutils import Letters, Digits, rfind, delete
+import pkg/url/[constants, checkers, types]
 import pkg/kaleidoscope/search
 import pkg/shakar
 
@@ -75,10 +75,7 @@ func isAsciiHexDigit*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
   (c >= '0' and c <= '9') or (c >= 'A' and c <= 'F') or (c >= 'a' and c <= 'f')
 
 proc pruneFragment*(input: var Input): Option[string] {.raises: [], cdecl.} =
-  # This should be fairly fast since it uses Kaleidoscope.
-  # That'll use AVX2 or SSE4.1 when possible, and fall back
-  # to a scalar implementation on other platforms.
-  let locationOfFirst = search.find(input, "#")
+  let locationOfFirst = strutils.find(input, "#")
   if locationOfFirst == -1:
     return none(string)
 
@@ -163,8 +160,6 @@ when defined(nimUrlUseSse2):
     size
 else:
   func findNextHostDelimiterSpecial*(view: string, location: uint64): uint64 =
-    # TODO: Implement AVX2/SSE4.1/NEON variants
-    # For now, this table approach should suffice.
     let str = view[location ..< view.len]
     for pos, c in str:
       if SpecialHostDelimiters[cast[uint8](c)] == 1:
@@ -220,3 +215,19 @@ func containsForbiddenDomainCodePoint*(input: string): uint8 {.raises: [].} =
     inc i
 
   ensureMove(accum)
+
+func shortenPath*(path: var string, typ: SchemeType): bool {.inline, raises: [].} =
+  # Let path be url's path.
+  # If url's scheme is "file", path's size is 1 and path[0] is a normalized
+  # Windows drive letter, then return.
+  if typ == SchemeType.File and path.find('/') == -1 and path.len > 0:
+    if isNormalizedWindowsDriveLetter(path[1 ..< path.len]):
+      return false
+
+  # Remove path's last item, if any.
+  let lastDelim = path.rfind('/')
+  if lastDelim != -1:
+    path.delete(lastDelim, lastDelim)
+    return true
+
+  false
