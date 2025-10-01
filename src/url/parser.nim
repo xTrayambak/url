@@ -349,6 +349,17 @@ proc parseURLImpl*(
         url.pathname = percentEncode(modifiedView, C0ControlPercentEncode)
       else:
         url.pathname = percentEncode(view, C0ControlPercentEncode)
+    of State.Port:
+      let
+        portView = urlData[inputPosition ..< urlData.len]
+        increment = url.parsePort(portView, true)
+
+      if !increment:
+        return err(ParseError.InvalidPort)
+      else:
+        inputPosition += &increment
+
+      state = State.PathStart
     else:
       break
 

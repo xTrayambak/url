@@ -1,8 +1,7 @@
 ## Separate URL parsing routines
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[options, strutils]
-from std/uri import encodeUrl
+import std/[options, strutils, math]
 import pkg/url/[checkers, helpers, types, unicode]
 import pkg/[kaleidoscope/search, results, shakar]
 
@@ -327,3 +326,33 @@ proc consumePreparedPath*(url: URL, input: string): string =
 
       if location == -1:
         return ensureMove(path)
+
+proc parsePort*(
+    url: var URL, view: string, checkTrailingContent: bool
+): Option[uint64] =
+  if view.len > 0 and view[0] == '-':
+    return none(uint64)
+
+  let size = uint64(view.len)
+
+  var port: uint
+  var index: uint64
+
+  # OPTIMIZE: I'm sure we can do better than this...
+  # I tried writing a fixed-size (5 byte array)
+  # implementation but it didn't quite work out.
+  while index < size:
+    if view[index] notin Digits:
+      break
+
+    inc index
+
+  port = parseUint(view[0 ..< index])
+
+  if port > uint(uint16.high):
+    # If the port is somehow greater than
+    # 65536, we will consider it invalid.
+    return none(uint64)
+
+  url.port = some(uint16(port))
+  some(uint64(index))

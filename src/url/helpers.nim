@@ -1,7 +1,7 @@
 ## Helper routines for the parser
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[options]
+import std/[math, options]
 from std/strutils import Letters, Digits
 import pkg/url/[constants, types]
 import pkg/kaleidoscope/search

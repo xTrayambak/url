@@ -27,6 +27,18 @@ suite "basic URL parsing tests":
     check(url1.pathname == "me@xtrayambak.xyz")
     check(url1.hasOpaquePath)
 
+  test "ports":
+    let url1 = parseURL("https://0.0.0.0:8089/index.html")
+
+    check(&url1.port == 8089'u16)
+
+    let url2 = parseURL("https://google.com:65535/supersecretcode.java")
+    check(&url2.port == 65535'u16)
+
+  test "expect error when port is beyond 65535":
+    expect URLParsingError:
+      let url1 = parseURL("https://google.com:65536")
+
   # Do not put any tests below it, because it'll be very slow
   # and you won't see the results instantly!
   test "huge/forbidden length URLs (4GB+)":
