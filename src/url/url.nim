@@ -225,9 +225,9 @@ proc consumePreparedPath*(url: URL, input: string): string =
     # Allocate enough memory for the worst case (source: i made it up)
 
   let
-    special = url.specialScheme.isSpecial()
+    special = url.getSchemeType().isSpecial()
     mayNeedSlowFileHandling =
-      url.specialScheme == SchemeType.File and isWindowsDriveLetter(input)
+      url.getSchemeType() == SchemeType.File and isWindowsDriveLetter(input)
 
   var trivialPath =
     if special:
@@ -265,7 +265,7 @@ proc consumePreparedPath*(url: URL, input: string): string =
         special and
         cast[bool](accumulator and (NeedEncoding or BackslashChar or PercentChar))
       ) == false
-    ) and url.specialScheme != SchemeType.File
+    ) and url.getSchemeType() != SchemeType.File
 
   if fastPath:
     var previousLoc = 0

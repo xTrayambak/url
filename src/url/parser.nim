@@ -144,21 +144,22 @@ proc parseURLImpl*(
       # Otherwise, if c is U+003A (:), then:
       if inputPosition != size and urlData[inputPosition] == ':':
         let buff = urlData[0 ..< inputPosition]
-        url.specialScheme = parseScheme(buff)
+        url.schemeType = parseScheme(buff)
 
-        if url.specialScheme == SchemeType.NotSpecial:
+        let schemeType = url.getSchemeType()
+
+        if schemeType == SchemeType.NotSpecial:
           url.nonSpecialScheme = buff
 
         # If url's scheme is "file", then:
-        if url.specialScheme == SchemeType.File:
+        if schemeType == SchemeType.File:
           # Set state to file state.
           state = State.File
-        elif url.specialScheme.isSpecial and *baseUrl and
-            (&baseUrl).specialScheme == url.specialScheme:
+        elif isSpecial(schemeType) and *baseUrl and getSchemeType(&baseUrl) == schemeType:
           # Otherwise, if url is special, base is non-null, and base's scheme
           # is url's scheme:
           state = State.SpecialRelativeOrAuthority
-        elif url.specialScheme.isSpecial:
+        elif isSpecial(schemeType):
           # Otherwise, if url is special, set state to special authority
           # slashes state.
           state = State.SpecialAuthoritySlashes
@@ -214,7 +215,7 @@ proc parseURLImpl*(
 
         # The delimiters are @, /, ?, \\
         let location =
-          if url.specialScheme.isSpecial:
+          if isSpecial(url.getSchemeType()):
             findAuthorityDelimiterSpecial(view)
           else:
             findAuthorityDelimiter(view)
@@ -223,7 +224,7 @@ proc parseURLImpl*(
     of State.Host:
       var hostView = urlData[inputPosition ..< urlData.len]
       let (location, foundColon) =
-        getHostDelimiterFunction(url.specialScheme.isSpecial(), hostView)
+        getHostDelimiterFunction(isSpecial(url.getSchemeType()), hostView)
       hostView = hostView[0 ..< location]
 
       inputPosition =
@@ -249,7 +250,7 @@ proc parseURLImpl*(
       else:
         # If url is special and host_view is the empty string,
         # validation error, return failure.
-        if hostView.len < 1 and url.specialScheme.isSpecial:
+        if hostView.len < 1 and isSpecial(url.getSchemeType()):
           return err(ParseError.EmptyHost)
 
         # Let host be the result of host parsing host_view with url is not
@@ -264,7 +265,7 @@ proc parseURLImpl*(
         state = State.PathStart
     of State.PathStart:
       # If url is special, then:
-      if url.specialScheme.isSpecial:
+      if isSpecial(url.getSchemeType()):
         # Set state to path state.
         state = State.Path
 
@@ -299,7 +300,7 @@ proc parseURLImpl*(
       else:
         inputPosition = size + 1
 
-      url.path = url.consumePreparedPath(view).split('/')
+      url.pathname = url.consumePreparedPath(view)
     #[ of State.Fragment:
       var fragment = newStringOfCap(size - inputPosition)
         # The fragment is guaranteed to be the last parsed component, so we can make a proper calculation as to how many bytes we'll need.

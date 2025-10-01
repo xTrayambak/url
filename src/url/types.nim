@@ -2,9 +2,11 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[strutils, options]
+import pkg/url/unicode
 import pkg/shakar
 
 #!fmt: off
+
 type
   SchemeType* {.pure, size: sizeof(uint8).} = enum
     Http = 0
@@ -19,37 +21,85 @@ type
     ## This is the core URL structure outputted by this library.
     ## **See**: https://url.spec.whatwg.org/#url-representation
 
-    username*: string
+    username: string
       ## A URL's username is an ASCII string identifying a username.
       ## It is an optional field and can be empty.
 
-    password*: string
+    password: string
       ## A URL's password is an ASCII string identifying a password.
       ## It is an optional field and can be empty.
 
-    hostname*: Option[string]
+    hostname: Option[string]
       ## A URL's host is empty or a host. It is initially an empty optional.
 
-    port*: Option[uint16]
+    port: Option[uint16]
       ## A URL's port is either empty or a 16-bit unsigned integer that identifies a
       ## networking port. It is initially an empty optional.
 
-    path*: seq[string]
+    pathname*: string
       ## A URL's path is either an ASCII string or a list of zero or more ASCII
       ## strings, usually identifying a location.
 
-    query*: Option[string]
+    query: Option[string]
       ## A URL's query is either empty or an ASCII string. It is initially
       ## an empty optional.
 
-    fragment*: Option[string]
+    fragment: Option[string]
       ## A URL's fragment is either empty or an ASCII string that can be used for
       ## further processing on the resource the URL's other components identify.
       ## It is initially an empty optional.
 
-    specialScheme*: SchemeType
-    nonSpecialScheme*: string
-    hasOpaquePath*: bool
+    specialScheme: SchemeType
+    nonSpecialScheme: string
+    hasOpaquePath: bool
+
+func `hostname=`*(url: var URL, input: Option[string]) {.inline, raises: [].} =
+  url.hostname = input
+
+func `pathname=`*(url: var URL, input: string) {.inline, raises: [].} =
+  url.pathname = input
+
+func `username=`*(url: var URL, input: string) {.inline, raises: [].} =
+  url.username = input
+
+func `password=`*(url: var URL, input: string) {.inline, raises: [].} =
+  url.password = input
+
+func `port=`*(url: var URL, input: Option[uint16]) {.inline, raises: [].} =
+  url.port = input
+
+func updateBaseQuery*(url: var URL, input: Option[string], queryPercentEncodeSet: openArray[uint8]) {.inline, raises: [].} =
+  if !input:
+    url.query = input
+  else:
+    url.query = some(percentEncode(&input, queryPercentEncodeSet))
+
+func updateBaseQuery*(url: var URL, input: Option[string]) {.inline, raises: [].} =
+  url.query = input
+
+func `fragment=`*(url: var URL, input: Option[string]) {.inline, raises: [].} =
+  if !input:
+    url.fragment = input
+  else:
+    url.fragment = some(percentEncode(&input, FragmentPercentEncode))
+
+func `schemeType=`*(url: var URL, input: SchemeType) {.inline, raises: [].} =
+  url.specialScheme = input
+
+func `nonSpecialScheme=`*(url: var URL, input: string) {.inline, raises: [].} =
+  url.nonSpecialScheme = input
+
+func updateEncodedFragment*(url: var URL, input: Option[string]) {.inline, raises: [].} =
+  url.fragment = input
+
+func clearPathname*(url: var URL) {.inline, raises: [].} =
+  url.pathname.reset()
+
+func clearQuery*(url: var URL) {.inline, raises: [].} =
+  url.query.reset()
+
+func `hasOpaquePath=`*(url: var URL, flag: bool) {.inline, raises: [].} =
+  url.hasOpaquePath = flag
 
 func host*(url: URL): string {.inline, raises: [].} =
   var output: string
@@ -62,8 +112,35 @@ func host*(url: URL): string {.inline, raises: [].} =
 
   ensureMove(output)
 
+func hostname*(url: URL): Option[string] {.inline, raises: [].} =
+  url.hostname
+
 func pathname*(url: URL): string {.inline, raises: [].} =
-  url.path.join("/")
+  url.pathname
+
+func path*(url: URL): seq[string] {.inline, raises: [].} =
+  url.pathname.split('/')
+
+func query*(url: URL): Option[string] {.inline, raises: [].} =
+  url.query
+
+func port*(url: URL): Option[uint16] {.inline, raises: [].} =
+  url.port
+
+func fragment*(url: URL): Option[string] {.inline, raises: [].} =
+  url.fragment
+
+func username*(url: URL): string {.inline, raises: [].} =
+  url.username
+
+func password*(url: URL): string {.inline, raises: [].} =
+  url.password
+
+func hasOpaquePath*(url: URL): bool {.inline, raises: [].} =
+  url.hasOpaquePath
+
+func getSchemeType*(url: URL): SchemeType {.inline, raises: [].} =
+  url.specialScheme
 
 func scheme*(url: URL): string {.inline, raises: [].} =
   case url.specialScheme
