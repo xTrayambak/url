@@ -143,9 +143,35 @@ const
     0x01 or 0x02 or 0x04 or 0x08 or 0x10 or 0x20 or 0x40 or 0x80,
   ]
 
+  IsForbiddenHostCodePointTable = block:
+    var arr: array[256, uint8]
+    arr[cast[uint8]('\0')] = 1
+    arr[cast[uint8]('\x09')] = 1
+    arr[cast[uint8]('\x0a')] = 1
+    arr[cast[uint8]('\x0d')] = 1
+    arr[cast[uint8](' ')] = 1
+    arr[cast[uint8]('#')] = 1
+    arr[cast[uint8]('/')] = 1
+    arr[cast[uint8](':')] = 1
+    arr[cast[uint8]('<')] = 1
+    arr[cast[uint8]('>')] = 1
+    arr[cast[uint8]('?')] = 1
+    arr[cast[uint8]('@')] = 1
+    arr[cast[uint8]('[')] = 1
+    arr[cast[uint8]('\\')] = 1
+    arr[cast[uint8](']')] = 1
+    arr[cast[uint8]('^')] = 1
+    arr[cast[uint8]('|')] = 1
+
+    ensureMove(arr)
+
 func bitAt*(a: openArray[uint8], i: uint8): bool {.inline, raises: [], cdecl.} =
   return cast[bool](not (not (a[i shr 3'u8] and (1'u8 shl (i and 7'u8)))))
 
+# These are particularly hot routines, so it's best
+# we try to squeeze every last bit of performance out
+# of them.
+{.push checks: off.}
 func percentEncode*(input: string, characterSet: openArray[uint8]): string {.cdecl.} =
   var flag = -1
 
@@ -173,3 +199,8 @@ func percentEncode*(input: string, characterSet: openArray[uint8]): string {.cde
       res &= c
 
   ensureMove(res)
+
+func isForbiddenHostCodePoint*(c: char): bool {.inline, raises: [].} =
+  cast[bool](IsForbiddenHostCodePointTable[cast[uint8](c)])
+
+{.pop.}

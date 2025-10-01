@@ -112,7 +112,6 @@ proc parseURLImpl*(
   let size = uint64(urlData.len)
 
   while inputPosition < size:
-    # echo "fsm iter " & $inputPosition & "/" & $size & ' ' & $state
     case state
     of State.SchemeStart:
       # If c is an ASCII alpha, append c, lowercased, to buffer and set
@@ -316,6 +315,8 @@ proc parseURLImpl*(
         if *host:
           url.hostname = some(&host)
         else:
+          echo host.error()
+          assert off
           return err(host.error())
 
         # Set url's host to host, and state to path start state.

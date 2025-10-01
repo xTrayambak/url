@@ -181,11 +181,18 @@ proc parseIpv6(input: var string): Result[string, ParseError] =
           return err(ParseError.InvalidIpv6Address)
 
         # While c is an ASCII digit:
+        discard "TODO"
+
+func parseOpaqueHost*(input: string): Option[string] {.inline.} =
+  for c in input:
+    if isForbiddenHostCodePoint(c):
+      return none(string)
+
+  # Return the result of running UTF-8 percent-encode on input
+  # using the C0 control percent-encode set.
+  some(percentEncode(input, C0ControlPercentEncode))
 
 proc parseHost*(url: URL, input: string): Result[string, ParseError] =
-  if input.len < 1:
-    return err(ParseError.EmptyHost)
-
   var input = input
 
   # If input starts with U+005B ([), then:
@@ -202,13 +209,19 @@ proc parseHost*(url: URL, input: string): Result[string, ParseError] =
 
   # If isNotSpecial is true, then return the result of opaque-host
   # parsing input.
-  # if not url.specialScheme.isSpecial:
-  #  return parseOpaqueHost(input)
+  if not getSchemeType(url).isSpecial():
+    let opaque = parseOpaqueHost(input)
+    if !opaque:
+      return err(ParseError.ForbiddenCodePointInOpaqueHost)
+    else:
+      return ok(&opaque)
 
   var buffer = toLowerAscii(input)
   let isForbidden = containsForbiddenDomainCodePoint(buffer)
   if isForbidden == 0 and search.find(buffer, "xn-") == -1:
     return ok(ensureMove(buffer))
+
+  unreachable
 
 proc consumePreparedPath*(url: URL, input: string): string =
   let accumulator = pathSignature(input)

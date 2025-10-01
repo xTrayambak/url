@@ -199,6 +199,7 @@ type
     IdnaError = "invalid international domain name"
     InvalidPort = "invalid port number"
     InvalidIpv4Address = "invalid IPv4 address"
+    ForbiddenCodePointInOpaqueHost = "forbidden code point in opaque host"
     InvalidIpv6Address = "invalid IPv6 address"
     InvalidDomainCharacter = "invalid domain character"
     RelativeUrlWithoutBase = "relative URL without a base"

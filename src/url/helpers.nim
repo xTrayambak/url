@@ -1,10 +1,8 @@
 ## Helper routines for the parser
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[math, options]
-from std/strutils import Letters, Digits, rfind, delete
+import std/[math, options, strutils]
 import pkg/url/[constants, checkers, types]
-import pkg/kaleidoscope/search
 import pkg/shakar
 
 export Letters, Digits
@@ -58,6 +56,15 @@ const
     arr[cast[uint8]('^')] = 1
     arr[cast[uint8]('|')] = 1
     arr[cast[uint8]('%')] = 1
+
+    ensureMove(arr)
+
+  HostDelimiters = block:
+    var arr: array[256, uint8]
+    arr[cast[uint8](':')] = 1'u8
+    arr[cast[uint8]('/')] = 1'u8
+    arr[cast[uint8]('?')] = 1'u8
+    arr[cast[uint8]('[')] = 1'u8
 
     ensureMove(arr)
 
@@ -159,13 +166,23 @@ when defined(nimUrlUseSse2):
 
     size
 else:
-  func findNextHostDelimiterSpecial*(view: string, location: uint64): uint64 =
+  func findNextHostDelimiterSpecial*(
+      view: string, location: uint64
+  ): uint64 {.inline.} =
     let str = view[location ..< view.len]
     for pos, c in str:
       if SpecialHostDelimiters[cast[uint8](c)] == 1:
         return uint64(pos) + location
 
     uint64(view.len)
+
+func findNextHostDelimiter*(view: string, location: uint64): uint64 {.inline.} =
+  let str = view[location ..< view.len.uint64]
+  for pos, c in str:
+    if HostDelimiters[cast[uint8](c)] == 1:
+      return uint64(pos) + location
+
+  uint64(view.len)
 
 func getHostDelimiterFunction*(
     isSpecial: bool, view: string
@@ -195,8 +212,25 @@ func getHostDelimiterFunction*(
 
       location = findNextHostDelimiterSpecial(view, location)
   else:
-    unreachable
+    # We move to the next delimiter.
+    location = findNextHostDelimiter(view, location)
 
+    while location < size:
+      if view[location] == '[':
+        let tmpLoc = view[location ..< view.len].find("]")
+        if tmpLoc == -1:
+          location = size
+          break
+        else:
+          location = uint64(tmpLoc)
+      else:
+        foundColon = view[location] == ':'
+        break
+
+      location = findNextHostDelimiter(view, location)
+
+  # let target = int(size - location)
+  # view.delete(target, target)
   (location: location, foundColon: foundColon)
 
 func containsForbiddenDomainCodePoint*(input: string): uint8 {.raises: [].} =
