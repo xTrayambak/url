@@ -5,6 +5,39 @@ It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of N
 
 It uses [Kaleidoscope](https://github.com/xTrayambak/kaleidoscope) under the hood for accelerating certain string-related operations via SIMD, making it fast.
 
+## features
+- Mostly WHATWG compliant, and compliance is increasing.
+- Full support for IPv6 parsing and compression.
+- Support for opaque paths.
+- Support for relative-base URL pairs.
+
+## speed
+In `bench/runner.nim`, this library is tested against `std/uri` (the standard library's **URI** parser — not a **URL** parser!) and treeform's `urlly` library.
+This benchmark was done on a AMD Ryzen 5 5600H with 12 cores (albeit none of these parsers use any multithreading techniques, as those are a bit unnecessary).
+
+**Compile Flags Used**: `--define:release --define:nimUrlUseSse2 --define:danger`
+
+```
+   min time    avg time  std dv   runs name
+   4.113 ms    4.402 ms  ±0.117  x1000 treeform/urlly
+   3.183 ms    3.245 ms  ±0.048  x1000 std/uri
+   5.171 ms    5.257 ms  ±0.060   x950 xTrayambak/nim-url
+```
+
+This might seem a bit bad, but then you'd look at the features+compliance chart:
+
+| Feature                | std/uri                                       | urlly                                               | url      |
+|------------------------|-----------------------------------------------|----------------------------------------------------|----------|
+| WHATWG Compliance      | No; it is a simple RFC 3986 compliant parser. | No; it is a simple `rfind()`/`find()` based parser. | Yes; it attempts to strictly adhere to the WHATWG URL standards and uses a parser state machine almost identical to what the specifications prescribe. |
+| IPv6 Parsing           | Partial; it does not literally parse anything - it just appends IPv6 data to the string buffer. | No; it fails to parse IPv6 addresses and mistakes it for different components. | Yes; it can parse IPv6 addresses as prescribed by the URL standard. |
+| IPv6 Compression       | No; it cannot perform IPv6 compression.       | No; it cannot perform IPv6 compression.           | Yes; it can perform IPv6 compression. |
+| Relative URLs          | Yes; supports base and relative URLs as per RFC 3986 | No; does not expose any methods for base and relative URLs. | Yes; supports base and relative URLs as per the WHATWG URL standard. |
+| Schemes                | Yes; handles all special and non-special schemes as per RFC 3986 | No; fails to parse non-special schemes.          | Yes; handles all special (`http`, `https`, `ws`, etc.) and non-special schemes (`loremipsum`, `steam`, etc.) (except `file://`, this is being worked on) as per the WHATWG specs. |
+| Authorization Fields   | Yes                                           | Yes                                                | Yes      |
+| Opaque Paths           | No; fails to handle opaque paths (e.g., `mailto:chudkumo@gmail.com`) | No; fails to handle opaque paths                  | Yes; handles opaque paths as per the WHATWG spec. |
+| Serialization          | Works, but not WHATWG compliant              | Works, but not WHATWG compliant                   | Works, WHATWG compliant. |
+| Error-reporting        | Exceptions only                              | Does not raise any errors, silently processes invalid data. | Allows the usage of either `Result[URL, ParseError]` or `URLParseError`. Errors are very close to their equivalents in the WHATWG specifications. |
+
 ## installation
 To add this library to your project, run:
 ```sh
