@@ -8,7 +8,7 @@ It uses [Kaleidoscope](https://github.com/xTrayambak/kaleidoscope) under the hoo
 ## installation
 To add this library to your project, run:
 ```sh
-$ nimble add gh:xTrayambak/url
+$ nimble add url
 ```
 
 ## usage
