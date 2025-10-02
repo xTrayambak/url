@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options, strutils, math]
-import pkg/url/[checkers, helpers, types, unicode]
+import pkg/url/[checkers, helpers, serializers, types, unicode]
 import pkg/[kaleidoscope/search, results, shakar]
 
 const IsSpecialList = ["http", " ", "https", "ws", "ftp", "wss", "file", " "]
@@ -84,9 +84,6 @@ proc parseScheme*(scheme: string): SchemeType =
   toSchemeType(target)
 
 proc parseIpv6(input: var string): Result[string, ParseError] =
-  # TODO: Complete
-  return err(ParseError.InvalidIPv6Address)
-
   if input.len < 1:
     return err(ParseError.InvalidIPv6Address)
 
@@ -108,12 +105,12 @@ proc parseIpv6(input: var string): Result[string, ParseError] =
     # IPv6-invalid-compression validation error, return failure.
     return err(ParseError.InvalidIpv6Address)
 
-  # Increase pntr by 2.
-  pntr += 2
+    # Increase pntr by 2.
+    pntr += 2
 
-  # Increase pieceIndex by 1 and then set compress to pieceIndex.
-  inc pieceIndex
-  compress = some(pieceIndex)
+    # Increase pieceIndex by 1 and then set compress to pieceIndex.
+    inc pieceIndex
+    compress = some(pieceIndex)
 
   # While c is not the EOF code point
   while pntr != input.len:
@@ -181,7 +178,85 @@ proc parseIpv6(input: var string): Result[string, ParseError] =
           return err(ParseError.InvalidIpv6Address)
 
         # While c is an ASCII digit:
-        discard "TODO"
+        while pntr != input.len and checkers.isDigit(input[pntr]):
+          # Let number be c interpreted as decimal number.
+          let number = cast[uint8](input[pntr]) - cast[uint8]('0')
+
+          # If ipv4Piece is null, then set ipv4Piece to number.
+          if !ipv4Piece:
+            ipv4Piece = some(uint16(number))
+          elif &ipv4Piece == 0:
+            # Otherwise, if ipv4Piece is 0, validation error, return failure.
+            return err(ParseError.InvalidIpv6Address)
+          else:
+            # Otherwise, set ipv4Piece to ipv4Piece times 10 + number.
+            ipv4Piece = some(&ipv4Piece * 10'u16 + uint16(number))
+
+          # If ipv4Piece is greater than 255, validation error, return failure.
+          if &ipv4Piece > 255'u16:
+            return err(ParseError.InvalidIpv6Address)
+
+          # Increase pntr by 1.
+          inc pntr
+
+        # Set address[pieceIndex] to address[pieceIndex] times 0x100 +
+        # ipv4Piece.
+        address[pieceIndex] = uint16(address[pieceIndex] * 0x100'u16 + &ipv4Piece)
+
+        # Increase numbersSeen by 1.
+        inc numbersSeen
+
+        # If numbersSeen is 2 or 4, then increase pieceIndex by 1.
+        if numbersSeen == 2 or numbersSeen == 4:
+          inc pieceIndex
+
+      # If numbersSeen is not 4, validation error, return failure.
+      if numbersSeen != 4:
+        return err(ParseError.InvalidIpv6Address)
+
+      # Break.
+      break
+    elif pntr != input.len and input[pntr] == ':':
+      # Otherwise, if c is U+003A (:):
+      # Increase pntr by 1.
+      inc pntr
+
+      # If c is the EOF code point, validation error, return failure.
+      if pntr == input.len:
+        return err(ParseError.InvalidIpv6Address)
+    elif pntr != input.len:
+      # Otherwise, if c is not the EOF code point, validation error,
+      # return failure.
+      return err(ParseError.InvalidIpv6Address)
+
+    # Set address[pieceIndex] to value.
+    address[pieceIndex] = value
+
+    # Increment pieceIndex by 1.
+    inc pieceIndex
+
+  # If compress is non-null, then:
+  if *compress:
+    # Let swaps be pieceIndex - compress.
+    var swaps = pieceIndex - &compress
+
+    # Set pieceIndex to 7.
+    pieceIndex = 7
+
+    # While pieceIndex is not zero and swaps is greater than zero,
+    # swap address[pieceIndex] and address[compress + swaps - 1],
+    # and then decrease both pieceIndex and swaps by 1.
+    while pieceIndex != 0 and swaps > 0:
+      swap(address[pieceIndex], address[&compress + swaps - 1])
+
+      dec pieceIndex
+      dec swaps
+  elif pieceIndex != 8:
+    # Otherwise, if compress is null and pieceIndex is not 8, validation error,
+    # return failure.
+    return err(ParseError.InvalidIpv6Address)
+
+  ok(serializeIpv6(address))
 
 func parseOpaqueHost*(input: string): Option[string] {.inline.} =
   for c in input:

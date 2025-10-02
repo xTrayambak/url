@@ -44,12 +44,15 @@ func pathSignature*(input: string): uint8 {.inline, raises: [].} =
 
   ensureMove(accum)
 
-func isWindowsDriveLetter*(input: string): bool {.inline.} =
+func isWindowsDriveLetter*(input: string): bool {.inline, raises: [].} =
   input.len >= 2 and
     (isAlphaAscii(input[0]) and ((input[1] == ':') or (input[1] == '|'))) and (
     (input.len == 2) or
     (input[2] == '/' or input[2] == '\\' or input[2] == '?' or input[2] == '#')
   )
 
-func isNormalizedWindowsDriveLetter*(input: string): bool {.inline.} =
+func isNormalizedWindowsDriveLetter*(input: string): bool {.inline, raises: [].} =
   input.len >= 2 and isAlphaAscii(input[0]) and input[1] == ':'
+
+func isDigit*(c: char): bool {.inline, raises: [].} =
+  c >= '0' and c <= '9'
