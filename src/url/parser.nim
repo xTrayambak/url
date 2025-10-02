@@ -140,10 +140,13 @@ proc parseURLImpl*(
         url.updateBaseQuery(base.query)
         url.fragment = fragment
 
+        state = State.Fragment
+
         return ok(move(url))
       elif getSchemeType(&baseUrl) != SchemeType.File:
         # Otherwise, if base's scheme is not "file", set state
         # to relative state and decrease pointer by 1.
+        dec inputPosition
         state = State.RelativeScheme
       else:
         # Otherwise, set state to file state and decrease pointer by 1.
@@ -259,8 +262,7 @@ proc parseURLImpl*(
       # about AUTHORITY.
 
       # Check if url data contains an @.
-      if search.find(urlData, "@") == -1:
-        # TODO: Implement find(string, char) in Kaleidoscope. This is wasteful!
+      if strutils.find(urlData, '@') == -1:
         state = State.Host
         continue
 
@@ -276,7 +278,64 @@ proc parseURLImpl*(
           else:
             findAuthorityDelimiter(view)
 
-        # TODO: Complete this
+        let authorityView = view[0 ..< location]
+        let endOfAuthority = inputPosition + authorityView.len.uint64
+
+        # If c is U+0040 (@), then:
+        if endOfAuthority != size and urlData[endOfAuthority] == '@':
+          # If atSignSeen is true, then prepend "%40" to the buffer.
+          if atSignSeen:
+            if passwordTokenSeen:
+              url.password = url.password & "%40"
+            else:
+              url.username = url.username & "%40"
+
+          atSignSeen = true
+          if not passwordTokenSeen:
+            let passwordTokenLocation = authorityView.find(':')
+            passwordTokenSeen = passwordTokenLocation != -1
+
+            if not passwordTokenSeen:
+              url.username =
+                url.username & percentEncode(authorityView, UserInfoPercentEncode)
+            else:
+              url.username =
+                url.username &
+                percentEncode(
+                  authorityView[0 ..< passwordTokenLocation], UserInfoPercentEncode
+                )
+
+              url.password =
+                url.password &
+                percentEncode(
+                  authorityView[passwordTokenLocation + 1 ..< authorityView.len],
+                  UserInfoPercentEncode,
+                )
+          else:
+            url.password =
+              url.password & percentEncode(authorityView, UserInfoPercentEncode)
+        elif endOfAuthority == size or urlData[endOfAuthority] == '/' or
+            urlData[endOfAuthority] == '?' or
+            (isSpecial(getSchemeType(url)) and urlData[endOfAuthority] == '\\'):
+          # Otherwise, if one of the following is true:
+          # - c is the EOF code point, U+002F (/), U+003F (?), or U+0023 (#)
+          # - url is special and c is U+005C (\)
+
+          # If atSignSeen is true and authority_view is the empty string,
+          # validation error, return failure.
+          if atSignSeen and authorityView.len < 1:
+            return err(ParseError.HostMissing)
+
+          state = State.Host
+          break
+
+        if endOfAuthority == size:
+          if *fragment:
+            url.fragment = fragment
+
+          return ok(move(url))
+
+        inputPosition = endOfAuthority + 1
     of State.Host:
       var hostView = urlData[inputPosition ..< urlData.len]
       let (location, foundColon) =
@@ -315,8 +374,6 @@ proc parseURLImpl*(
         if *host:
           url.hostname = some(&host)
         else:
-          echo host.error()
-          assert off
           return err(host.error())
 
         # Set url's host to host, and state to path start state.
