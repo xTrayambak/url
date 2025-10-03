@@ -3,8 +3,6 @@ This library provides a very fast URL parser written in pure Nim, based upon the
 
 It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of Nim projects requiring a URL parser.
 
-It uses [Kaleidoscope](https://github.com/xTrayambak/kaleidoscope) under the hood for accelerating certain string-related operations via SIMD, making it fast.
-
 ## features
 - Mostly WHATWG compliant, and compliance is increasing.
 - Full support for IPv6 parsing and compression.

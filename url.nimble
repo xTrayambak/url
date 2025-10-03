@@ -10,6 +10,4 @@ srcDir = "src"
 
 requires "nim >= 2.2.0"
 requires "results >= 0.5.1"
-requires "kaleidoscope#master"
 requires "benchy >= 0.0.1"
-

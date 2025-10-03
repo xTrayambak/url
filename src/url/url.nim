@@ -3,7 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options, strutils, math]
 import pkg/url/[checkers, helpers, serializers, types, unicode]
-import pkg/[kaleidoscope/search, results, shakar]
+import pkg/[results, shakar]
 
 const IsSpecialList = ["http", " ", "https", "ws", "ftp", "wss", "file", " "]
 
@@ -74,7 +74,7 @@ func serialize*(url: URL, excludeFragment: bool = false): string =
 func `$`*(url: URL): string {.inline.} =
   url.serialize()
 
-proc parseScheme*(scheme: string): SchemeType =
+func parseScheme*(scheme: string): SchemeType =
   if scheme.len < 1:
     return SchemeType.NotSpecial
 
@@ -83,7 +83,7 @@ proc parseScheme*(scheme: string): SchemeType =
 
   toSchemeType(target)
 
-proc parseIpv6(input: var string): Result[string, ParseError] =
+func parseIpv6(input: var string): Result[string, ParseError] =
   if input.len < 1:
     return err(ParseError.InvalidIPv6Address)
 
@@ -267,7 +267,7 @@ func parseOpaqueHost*(input: string): Option[string] {.inline.} =
   # using the C0 control percent-encode set.
   some(percentEncode(input, C0ControlPercentEncode))
 
-proc parseHost*(url: URL, input: string): Result[string, ParseError] =
+func parseHost*(url: URL, input: string): Result[string, ParseError] =
   var input = input
 
   # If input starts with U+005B ([), then:
@@ -293,12 +293,12 @@ proc parseHost*(url: URL, input: string): Result[string, ParseError] =
 
   var buffer = toLowerAscii(input)
   let isForbidden = containsForbiddenDomainCodePoint(buffer)
-  if isForbidden == 0 and search.find(buffer, "xn-") == -1:
+  if isForbidden == 0 and find(buffer, "xn-") == -1:
     return ok(ensureMove(buffer))
 
   unreachable
 
-proc consumePreparedPath*(url: URL, input: string): string =
+func consumePreparedPath*(url: URL, input: string): string =
   let accumulator = pathSignature(input)
 
   const
@@ -328,7 +328,7 @@ proc consumePreparedPath*(url: URL, input: string): string =
       var slashDot = 0
       var dotIsFile = true
       while true:
-        slashDot = search.find(input[slashDot ..< input.len], "/.")
+        slashDot = find(input[slashDot ..< input.len], "/.")
         if slashDot == -1:
           break
 
@@ -357,7 +357,7 @@ proc consumePreparedPath*(url: URL, input: string): string =
   if fastPath:
     var previousLoc = 0
     while true:
-      let newLocation = search.find(input[previousLoc ..< input.len], "/")
+      let newLocation = find(input[previousLoc ..< input.len], "/")
       if newLocation == -1:
         let pathView = input[0 ..< previousLoc]
         if pathView == "..":
@@ -394,9 +394,9 @@ proc consumePreparedPath*(url: URL, input: string): string =
     while true:
       var location =
         if special and cast[bool](accumulator and 2):
-          search.find(input, "/\\")
+          find(input, "/\\")
         else:
-          search.find(input, "/")
+          find(input, '/')
 
       var pathView = input
       if location != -1:
@@ -415,7 +415,7 @@ proc consumePreparedPath*(url: URL, input: string): string =
       if location == -1:
         return ensureMove(path)
 
-proc parsePort*(
+func parsePort*(
     url: var URL, view: string, checkTrailingContent: bool
 ): Option[uint64] =
   if view.len > 0 and view[0] == '-':

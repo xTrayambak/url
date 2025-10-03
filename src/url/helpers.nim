@@ -81,8 +81,8 @@ func isAlnumPlus*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
 func isAsciiHexDigit*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
   (c >= '0' and c <= '9') or (c >= 'A' and c <= 'F') or (c >= 'a' and c <= 'f')
 
-proc pruneFragment*(input: var Input): Option[string] {.raises: [], cdecl.} =
-  let locationOfFirst = strutils.find(input, "#")
+func pruneFragment*(input: var Input): Option[string] {.raises: [], cdecl.} =
+  let locationOfFirst = strutils.find(input, '#')
   if locationOfFirst == -1:
     return none(string)
 
@@ -217,7 +217,7 @@ func getHostDelimiterFunction*(
 
     while location < size:
       if view[location] == '[':
-        let tmpLoc = view[location ..< view.len].find("]")
+        let tmpLoc = view[location ..< view.len].find(']')
         if tmpLoc == -1:
           location = size
           break

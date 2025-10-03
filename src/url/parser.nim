@@ -3,7 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[importutils, options, strutils]
 import pkg/url/[constants, helpers, types, url, unicode]
-import pkg/[kaleidoscope/search, results, shakar]
+import pkg/[results, shakar]
 
 const
   FRAGMENT*: AsciiSet = CONTROLS + {' ', '"', '<', '>', '`'}
@@ -80,7 +80,7 @@ type State* {.pure.} = enum
   ## **See**: https://url.spec.whatwg.org/#port-state
   Port
 
-proc parseURLImpl*(
+func parseURLImpl*(
     input: Input, baseUrl: Option[URL] = none(URL)
 ): Result[URL, ParseError] =
   ## This is the main routine that handles the parsing
@@ -405,8 +405,7 @@ proc parseURLImpl*(
     of State.Path:
       var view = urlData[inputPosition ..< urlData.len]
 
-      let locOfQuestionMark = strutils.find(view, "?")
-        # TODO: Implement find(string, char) in Kaleidoscope
+      let locOfQuestionMark = strutils.find(view, '?')
 
       if locOfQuestionMark != -1:
         state = State.Query
@@ -446,7 +445,7 @@ proc parseURLImpl*(
       var view = urlData[inputPosition ..< urlData.len]
       # If c is U+003F (?), then set URL's query to the empty string and state
       # to query state.
-      let location = search.find(view, "?")
+      let location = find(view, '?')
 
       if location != -1:
         view = view[0 ..< location]

@@ -20,7 +20,7 @@ type URLParsingError* = object of ValueError
   ## Currently, specialized exceptions do not exist. They will
   ## be added in the future.
 
-proc tryParseURL*(
+func tryParseURL*(
     source: Input, baseUrl: Option[URL] = none(URL)
 ): Result[URL, ParseError] =
   ## Given a URL string (`source`), parse it using the WHATWG URL specifications parsing algorithm,
@@ -32,7 +32,7 @@ proc tryParseURL*(
   ## **Algorithm**: https://url.spec.whatwg.org/#url-parsing
   parseURLImpl(input = source, baseUrl = baseUrl)
 
-proc parseURL*(
+func parseURL*(
     source: Input, baseUrl: Option[URL] = none(URL)
 ): URL {.raises: [URLParsingError, ValueError].} =
   ## Given a URL string (`source`), parse it using the WHATWG URL specifications parsing algorithm,
