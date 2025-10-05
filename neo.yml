@@ -1,0 +1,11 @@
+name: url
+backend: C
+license: "BSD-3-Clause"
+kind: Library
+toolchain:
+  version: 2.2.0
+  cachedNimPath: !!null ~
+dependencies:
+  - results >= 0.5.1
+  - benchy >= 0.0.1
+formatter: nph
