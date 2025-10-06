@@ -299,8 +299,6 @@ func parseHost*(url: URL, input: string): Result[string, ParseError] =
   if isForbidden == 0 and find(buffer, "xn-") == -1:
     return ok(ensureMove(buffer))
 
-  unreachable
-
 func consumePreparedPath*(url: URL, input: string): string =
   let accumulator = pathSignature(input)
 
