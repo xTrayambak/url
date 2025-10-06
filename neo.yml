@@ -2,6 +2,7 @@ name: url
 backend: C
 license: "BSD-3-Clause"
 kind: Library
+version: 0.1.0
 toolchain:
   version: 2.2.0
   cachedNimPath: !!null ~
