@@ -1,6 +1,6 @@
 # Package
 
-version = "0.1.0"
+version = "0.1.1"
 author = "xTrayambak"
 description = "A standards-compliant WHATWG URL parser in pure Nim"
 license = "BSD-3-Clause"
