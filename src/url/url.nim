@@ -81,7 +81,8 @@ func parseScheme*(scheme: string): SchemeType =
   let hashValue = ((2'u8 * scheme.len.uint8 + cast[uint8](scheme[0]))) and 7
   let target = IsSpecialList[hashValue]
 
-  if target[0] == scheme[0] and equalMem(scheme[1].addr, target[1].addr, target.len - 2):
+  if target[0] == scheme[0] and
+      (scheme.len < 2 or equalMem(scheme[1].addr, target[1].addr, target.len - 2)):
     return toSchemeType(target)
 
   SchemeType.NotSpecial
@@ -358,7 +359,7 @@ func consumePreparedPath*(url: URL, input: string): string =
   if fastPath:
     var previousLoc = 0
     while true:
-      let newLocation = find(input[previousLoc ..< input.len], "/")
+      let newLocation = find(input[previousLoc ..< input.len], '/')
       if newLocation == -1:
         let pathView = input[0 ..< previousLoc]
         if pathView == "..":

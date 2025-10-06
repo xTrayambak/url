@@ -1,4 +1,4 @@
-import std/unittest
+import std/[base64, unittest]
 import pkg/url
 import pkg/shakar
 import pkg/pretty
