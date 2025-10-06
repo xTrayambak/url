@@ -202,10 +202,12 @@ func getHostDelimiterFunction*(
 
     while location < size:
       if view[location] == '[':
-        location = cast[uint64](view[location ..< view.len].find(']'))
-        if location == cast[uint64](-1):
+        let pos = view[location ..< view.len].find(']')
+        if pos == -1:
           location = size
           break
+
+        location = location + uint64(pos)
       else:
         foundColon = view[location] == ':'
         break

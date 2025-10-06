@@ -2,6 +2,7 @@ import std/[base64, unittest]
 import pkg/url
 import pkg/shakar
 import pkg/pretty
+import pkg/flatty/hexprint
 
 suite "batch 001 of quirky urls":
   test "kmb://rydcrgvkkwpocdppwczcan.cp/cbjyveokfsbtrlecqzvsn":

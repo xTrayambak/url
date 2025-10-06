@@ -329,17 +329,17 @@ func consumePreparedPath*(url: URL, input: string): string =
     if input[0] != '.':
       var slashDot = 0
       var dotIsFile = true
-      while true:
-        slashDot = find(input[slashDot ..< input.len], "/.")
+      while slashDot < input.len:
+        slashDot = find(input[slashDot ..< input.len], "/.") + slashDot
         if slashDot == -1:
           break
-
-        slashDot += 2
-        dotIsFile =
-          dotIsFile and
-          not (
-            slashDot == input.len or input[slashDot] == '.' or input[slashDot] == '/'
-          )
+        else:
+          slashDot += 2
+          dotIsFile =
+            dotIsFile and
+            not (
+              slashDot == input.len or input[slashDot] == '.' or input[slashDot] == '/'
+            )
 
       trivialPath = dotIsFile
 
@@ -359,7 +359,7 @@ func consumePreparedPath*(url: URL, input: string): string =
   if fastPath:
     var previousLoc = 0
     while true:
-      let newLocation = find(input[previousLoc ..< input.len], '/')
+      var newLocation = find(input[previousLoc ..< input.len], '/')
       if newLocation == -1:
         let pathView = input[0 ..< previousLoc]
         if pathView == "..":
@@ -379,8 +379,9 @@ func consumePreparedPath*(url: URL, input: string): string =
 
         return ensureMove(path)
       else:
+        newLocation = previousLoc + newLocation
         # This is a non-final segment.
-        let pathView = input[previousLoc .. newLocation - previousLoc]
+        let pathView = input[previousLoc ..< newLocation]
         previousLoc = newLocation + 1
 
         if pathView == "..":
@@ -437,7 +438,15 @@ func parsePort*(
 
     inc index
 
-  port = parseUint(view[0 ..< index])
+  if index == 0:
+    # There's no digits to parse.
+    # This data is erroneous.
+    return none(uint64)
+
+  try:
+    port = parseUint(view[0 ..< index])
+  except ValueError:
+    return none(uint64)
 
   if port > uint(uint16.high):
     # If the port is somehow greater than

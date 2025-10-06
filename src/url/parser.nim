@@ -268,7 +268,7 @@ func parseURLImpl*(
 
       var atSignSeen, passwordTokenSeen: bool
 
-      while true:
+      while inputPosition < size:
         let view = urlData[inputPosition ..< urlData.len]
 
         # The delimiters are @, /, ?, \\
@@ -278,7 +278,12 @@ func parseURLImpl*(
           else:
             findAuthorityDelimiter(view)
 
-        let authorityView = view[0 ..< location]
+        let authorityView =
+          if location > 0:
+            view[0 ..< location]
+          else:
+            view[0 .. 0]
+
         let endOfAuthority = inputPosition + authorityView.len.uint64
 
         # If c is U+0040 (@), then:
@@ -340,7 +345,12 @@ func parseURLImpl*(
       var hostView = urlData[inputPosition ..< urlData.len]
       let (location, foundColon) =
         getHostDelimiterFunction(isSpecial(url.getSchemeType()), hostView)
-      hostView = hostView[0 ..< location]
+
+      hostView =
+        if location > 0:
+          hostView[0 ..< location]
+        else:
+          hostView[0 .. 0]
 
       inputPosition =
         if location != cast[uint64](-1):
