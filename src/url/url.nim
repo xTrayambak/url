@@ -78,10 +78,13 @@ func parseScheme*(scheme: string): SchemeType =
   if scheme.len < 1:
     return SchemeType.NotSpecial
 
-  let hashValue = (2'u8 * scheme.len.uint8 + cast[uint8](scheme[0])) and 7
+  let hashValue = ((2'u8 * scheme.len.uint8 + cast[uint8](scheme[0]))) and 7
   let target = IsSpecialList[hashValue]
 
-  toSchemeType(target)
+  if target[0] == scheme[0] and equalMem(scheme[1].addr, target[1].addr, target.len - 2):
+    return toSchemeType(target)
+
+  SchemeType.NotSpecial
 
 func parseIpv6(input: var string): Result[string, ParseError] =
   if input.len < 1:
