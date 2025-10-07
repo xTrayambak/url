@@ -9,6 +9,9 @@ It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of N
 - Support for opaque paths.
 - Support for relative-base URL pairs.
 
+## safety
+`nim-url` is fuzzed regularly using libFuzzer and in the most recent fuzzing session (with ~1.1 **million** mutations), no crashes, undefined behaviour or denial of service problems were detected.
+
 ## speed
 In `bench/runner.nim`, this library is tested against `std/uri` (the standard library's **URI** parser — not a **URL** parser!) and treeform's `urlly` library.
 This benchmark was done on a AMD Ryzen 5 5600H with 12 cores (albeit none of these parsers use any multithreading techniques, as those are a bit unnecessary).

@@ -224,7 +224,7 @@ func getHostDelimiterFunction*(
           location = size
           break
         else:
-          location = uint64(tmpLoc)
+          location = location + uint64(tmpLoc)
       else:
         foundColon = view[location] == ':'
         break
