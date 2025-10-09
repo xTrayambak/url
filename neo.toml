@@ -1,0 +1,15 @@
+[package]
+name = "url"
+version = "0.1.1"
+license = "BSD-3-Clause"
+kind = "Library"
+backend = "C"
+binaries = []
+
+[toolchain]
+version = "2.2.0"
+
+dependencies = {
+   benchy = ">= 0.0.1",
+   results = ">= 0.5.1",
+}
