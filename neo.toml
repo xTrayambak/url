@@ -9,7 +9,6 @@ binaries = []
 [toolchain]
 version = "2.2.0"
 
-dependencies = {
-   benchy = ">= 0.0.1",
-   results = ">= 0.5.1",
-}
+[dependencies]
+benchy = ">= 0.0.1"
+results = ">= 0.5.1"
