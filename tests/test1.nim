@@ -39,6 +39,7 @@ suite "basic URL parsing tests":
   test "ports":
     let url1 = parseURL("https://0.0.0.0:8089/index.html")
 
+    check(&url1.hostname == "0.0.0.0")
     check(&url1.port == 8089'u16)
 
     let url2 = parseURL("https://google.com:65535/supersecretcode.java")
