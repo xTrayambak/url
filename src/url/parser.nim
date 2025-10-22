@@ -6,18 +6,19 @@ import pkg/url/[constants, helpers, types, url, unicode]
 import pkg/[results, shakar]
 
 const
-  FRAGMENT*: AsciiSet = CONTROLS + {' ', '"', '<', '>', '`'}
-  PATH*: AsciiSet = FRAGMENT + {'#', '?'}
+  FRAGMENT*: AsciiSet = CONTROLS + {32'u8, 34'u8, 60'u8, 62'u8, 96'u8}
+  PATH*: AsciiSet = FRAGMENT + {35'u8, 63'u8}
 
-  USERINFO*: AsciiSet = PATH + {'/', ':', ';', '=', '@', '[', '\\', ']', '^', '|'}
+  USERINFO*: AsciiSet =
+    PATH + {47'u8, 58'u8, 59'u8, 61'u8, 64'u8, 91'u8, 92'u8, 93'u8, 94'u8, 124'u8}
 
-  PATH_SEGMENT*: AsciiSet = PATH + {'/', '%'}
+  PATH_SEGMENT*: AsciiSet = PATH + {47'u8, 37'u8}
 
-  SPECIAL_PATH_SEGMENT*: AsciiSet = PATH_SEGMENT + {'\\'}
+  SPECIAL_PATH_SEGMENT*: AsciiSet = PATH_SEGMENT + {92'u8}
 
-  QUERY*: AsciiSet = CONTROLS + {' ', '"', '#', '<', '>'}
+  QUERY*: AsciiSet = CONTROLS + {32'u8, 34'u8, 35'u8, 60'u8, 62'u8}
 
-  SPECIAL_QUERY*: AsciiSet = QUERY + {'\''}
+  SPECIAL_QUERY*: AsciiSet = QUERY + {39'u8}
 
 type State* {.pure.} = enum
   ## **See**: https://url.spec.whatwg.org/#authority-state
