@@ -141,8 +141,6 @@ func parseURLImpl*(
         url.updateBaseQuery(base.query)
         url.fragment = fragment
 
-        state = State.Fragment
-
         return ok(move(url))
       elif getSchemeType(&baseUrl) != SchemeType.File:
         # Otherwise, if base's scheme is not "file", set state
@@ -426,32 +424,6 @@ func parseURLImpl*(
         inputPosition = size + 1
 
       url.pathname = url.consumePreparedPath(view)
-    #[ of State.Fragment:
-      var fragment = newStringOfCap(size - inputPosition)
-        # The fragment is guaranteed to be the last parsed component, so we can make a proper calculation as to how many bytes we'll need.
-
-      while inputPosition < size:
-        let c = urlData[inputPosition]
-
-        case c
-        of URLCodePoints:
-          # 3. UTF-8 percent-encode c using the fragment percent-encode set and append the result to url’s fragment.
-          # FIXME: do percent encoding here!
-          fragment &= c
-        of '%':
-          # 2. If c is U+0025 (%) and remaining does not start with two ASCII hex digits, invalid-URL-unit validation error.
-          let remainingSize = size - inputPosition
-          if remainingSize < 2 or (urlData[inputPosition + 1] notin ASCIIHexDigit) or
-              (urlData[inputPosition + 2] notin ASCIIHexDigit):
-            return err(ParseError.InvalidUrlUnit)
-        else:
-          # 1. If c is not a URL code point and not U+0025 (%), invalid-URL-unit validation error.
-          return err(ParseError.InvalidUrlUnit)
-
-        inc inputPosition
-
-      url.fragment = some(ensureMove(fragment))
-      break ]#
     of State.OpaquePath:
       var view = urlData[inputPosition ..< urlData.len]
       # If c is U+003F (?), then set URL's query to the empty string and state
