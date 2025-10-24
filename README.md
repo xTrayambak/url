@@ -63,7 +63,7 @@ try:
     let url2 = parseURL("")
 except url.URLParsingError as exc:
     echo "oof ouch owie my bones"
-    echo url.msg # Contains the error message as to why the parsing failed
+    echo exc.msg # Contains the error message as to why the parsing failed
 ```
 
 ## acceleration
