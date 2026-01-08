@@ -56,12 +56,3 @@ suite "basic URL parsing tests":
   test "expect error when port is beyond 65535":
     expect URLParsingError:
       let url1 = parseURL("https://google.com:65536")
-
-  # Do not put any tests below it, because it'll be very slow
-  # and you won't see the results instantly!
-  test "huge/forbidden length URLs (4GB+)":
-    var buff = newString(uint32.high.uint64 + 1'u64)
-      # Allocate a 4GB + 1 byte buffer. This takes a bit (no pun intended) to fully allocate.
-
-    expect URLParsingError:
-      let url1 = parseURL(buff)

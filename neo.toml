@@ -11,4 +11,5 @@ version = "2.2.0"
 
 [dependencies]
 benchy = ">= 0.0.1"
+shakar = ">= 0.1.3"
 results = ">= 0.5.1"
