@@ -33,7 +33,7 @@ func tryParseURL*(
 
 func parseURL*(
     source: Input, baseUrl: Option[URL] = none(URL)
-): URL {.raises: [URLParsingError, ValueError].} =
+): URL {.raises: [URLParsingError, ValueError, Exception].} =
   ## Given a URL string (`source`), parse it using the WHATWG URL specifications parsing algorithm,
   ## to try and produce a valid URL representation.
   ## 
@@ -41,8 +41,7 @@ func parseURL*(
   ## If parsing is unsuccessful, a `URLParsingError` is thrown, which can be caught by the programmer.
   ##
   ## **Algorithm**: https://url.spec.whatwg.org/#url-parsing
-  {.cast(raises: []).}:
-    let parsed = tryParseURL(source = source, baseUrl = baseUrl)
+  let parsed = tryParseURL(source = source, baseUrl = baseUrl)
 
   if !parsed:
     raise newException(URLParsingError, $parsed.error())
