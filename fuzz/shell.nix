@@ -3,6 +3,7 @@ with import <nixpkgs> { };
 mkShell {
   nativeBuildInputs = [
     clang
+    libllvm
     xxd
   ];
 

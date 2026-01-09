@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options, strutils, math]
-import pkg/url/[checkers, helpers, serializers, types, unicode]
+import pkg/url/[checkers, helpers, search, serializers, types, unicode, views]
 import pkg/[results, shakar]
 
 const IsSpecialList = ["http", " ", "https", "ws", "ftp", "wss", "file", " "]
@@ -74,7 +74,7 @@ func serialize*(url: URL, excludeFragment: bool = false): string =
 func `$`*(url: URL): string {.inline.} =
   url.serialize()
 
-func parseScheme*(scheme: string): SchemeType =
+func parseScheme*(scheme: StringView): SchemeType =
   if scheme.len < 1:
     return SchemeType.NotSpecial
 
@@ -87,7 +87,7 @@ func parseScheme*(scheme: string): SchemeType =
 
   SchemeType.NotSpecial
 
-func parseIpv6(input: var string): Result[string, ParseError] =
+func parseIpv6(input: StringView): Result[string, ParseError] =
   if input.len < 1:
     return err(ParseError.InvalidIPv6Address)
 
@@ -101,7 +101,7 @@ func parseIpv6(input: var string): Result[string, ParseError] =
   var compress: Option[int]
 
   # Let pntr be a pointer for input.
-  var pntr = 0
+  var pntr = 0'u32
 
   # If c is U+003A (:), then:
   if input[0] == ':':
@@ -154,7 +154,7 @@ func parseIpv6(input: var string): Result[string, ParseError] =
       if length == 0:
         return err(ParseError.InvalidIpv6Address)
 
-      pntr -= int(length)
+      pntr -= length
 
       # If pieceIndex is greater than 6, validation error, return failure.
       if pieceIndex > 6:
@@ -262,16 +262,18 @@ func parseIpv6(input: var string): Result[string, ParseError] =
 
   ok(serializeIpv6(address))
 
-func parseOpaqueHost*(input: string): Option[string] {.inline.} =
-  for c in input:
-    if isForbiddenHostCodePoint(c):
-      return none(string)
+func parseOpaqueHost*(input: StringView): Option[string] {.inline.} =
+  if anyOf(input, isForbiddenHostCodePoint):
+    return none(string)
 
   # Return the result of running UTF-8 percent-encode on input
   # using the C0 control percent-encode set.
   some(percentEncode(input, C0ControlPercentEncode))
 
-func parseHost*(url: URL, input: string): Result[string, ParseError] =
+func parseHost*(url: URL, input: StringView): Result[string, ParseError] =
+  if input.len < 1:
+    return err(ParseError.EmptyHost)
+
   var input = input
 
   # If input starts with U+005B ([), then:
@@ -282,7 +284,8 @@ func parseHost*(url: URL, input: string): Result[string, ParseError] =
 
     # Return the result of IPv6 parsing input with its leading U+005B ([) and
     # trailing U+005D (]) removed
-    input = input[1 ..< input.len - 1]
+    input.removePrefix(1)
+    input.removeSuffix(1)
 
     return parseIpv6(input)
 
@@ -295,12 +298,12 @@ func parseHost*(url: URL, input: string): Result[string, ParseError] =
     else:
       return ok(&opaque)
 
-  var buffer = toLowerAscii(input)
+  let buffer = toLowerAscii(input)
   let isForbidden = containsForbiddenDomainCodePoint(buffer)
   if isForbidden == 0 and find(buffer, "xn-") == -1:
-    return ok(ensureMove(buffer))
+    return ok(ensureMove($buffer))
 
-func consumePreparedPath*(url: URL, input: string): string =
+func consumePreparedPath*(url: URL, input: StringView): string =
   let accumulator = pathSignature(input)
 
   const
@@ -329,8 +332,9 @@ func consumePreparedPath*(url: URL, input: string): string =
     if input[0] != '.':
       var slashDot = 0
       var dotIsFile = true
-      while slashDot < input.len:
-        slashDot = find(input[slashDot ..< input.len], "/.") + slashDot
+      while slashDot < cast[int](input.len):
+        slashDot =
+          find(input.slice(uint32(slashDot), input.len), toStringView("/.")) + slashDot
         if slashDot == -1:
           break
         else:
@@ -338,14 +342,15 @@ func consumePreparedPath*(url: URL, input: string): string =
           dotIsFile =
             dotIsFile and
             not (
-              slashDot == input.len or input[slashDot] == '.' or input[slashDot] == '/'
+              slashDot == cast[int](input.len) or input[uint32(slashDot)] == '.' or
+              input[uint32(slashDot)] == '/'
             )
 
       trivialPath = dotIsFile
 
   if trivialPath:
     path &= '/'
-    path &= input
+    path &= $input
     return ensureMove(path)
 
   let fastPath =
@@ -359,9 +364,9 @@ func consumePreparedPath*(url: URL, input: string): string =
   if fastPath:
     var previousLoc = 0
     while true:
-      var newLocation = find(input[previousLoc ..< input.len], '/')
+      var newLocation = find(input.slice(cast[uint32](previousLoc), input.len), '/')
       if newLocation == -1:
-        let pathView = input[0 ..< previousLoc]
+        let pathView = input.slice(0'u32, cast[uint32](previousLoc))
         if pathView == "..":
           if path.len < 1:
             path = "/"
@@ -375,13 +380,13 @@ func consumePreparedPath*(url: URL, input: string): string =
 
         path &= '/'
         if pathView != ".":
-          path &= pathView
+          path &= $pathView
 
         return ensureMove(path)
       else:
         newLocation = previousLoc + newLocation
         # This is a non-final segment.
-        let pathView = input[previousLoc ..< newLocation]
+        let pathView = input.slice(cast[uint32](previousLoc), cast[uint32](newLocation))
         previousLoc = newLocation + 1
 
         if pathView == "..":
@@ -390,7 +395,7 @@ func consumePreparedPath*(url: URL, input: string): string =
             path.delete(lastDelim .. lastDelim)
         elif pathView != ".":
           path &= '/'
-          path &= pathView
+          path &= $pathView
   else:
     let needsPercentEncoding = cast[bool](accumulator and 1)
 
@@ -403,31 +408,31 @@ func consumePreparedPath*(url: URL, input: string): string =
 
       var pathView = input
       if location != -1:
-        pathView = pathView[0 ..< pathView.len - location]
-        input = input[location + 1 ..< input.len]
+        pathView = pathView.slice(0, pathView.len - cast[uint32](location))
+        input = input.slice(cast[uint32](location) + 1'u32, input.len)
 
       let pathBuffer =
         if needsPercentEncoding:
           percentEncode(ensureMove(pathView), FragmentPercentEncode)
         else:
-          ensureMove(pathView)
+          ensureMove($pathView)
 
       path &= '/'
-      path &= pathBuffer
+      path &= $pathBuffer
 
       if location == -1:
         return ensureMove(path)
 
 func parsePort*(
-    url: var URL, view: string, checkTrailingContent: bool
-): Option[uint64] =
+    url: var URL, view: StringView, checkTrailingContent: bool
+): Option[uint32] =
   if view.len > 0 and view[0] == '-':
-    return none(uint64)
+    return none(uint32)
 
-  let size = uint64(view.len)
+  let size = view.len
 
   var port: uint
-  var index: uint64
+  var index: uint32
 
   # OPTIMIZE: I'm sure we can do better than this...
   # I tried writing a fixed-size (5 byte array)
@@ -441,17 +446,17 @@ func parsePort*(
   if index == 0:
     # There's no digits to parse.
     # This data is erroneous.
-    return none(uint64)
+    return none(uint32)
 
   try:
-    port = parseUint(view[0 ..< index])
+    port = parseUint($view.slice(0, index))
   except ValueError:
-    return none(uint64)
+    return none(uint32)
 
   if port > uint(uint16.high):
     # If the port is somehow greater than
     # 65536, we will consider it invalid.
-    return none(uint64)
+    return none(uint32)
 
   url.port = some(uint16(port))
-  some(uint64(index))
+  some(index)

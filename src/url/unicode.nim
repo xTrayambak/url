@@ -2,6 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/strutils
+import pkg/url/views
 
 const
   FragmentPercentEncode*: array[32, uint8] = [
@@ -208,7 +209,9 @@ func bitAt*(a: openArray[uint8], i: uint8): bool {.inline, raises: [], cdecl.} =
 # we try to squeeze every last bit of performance out
 # of them.
 {.push checks: off.}
-func percentEncode*(input: string, characterSet: openArray[uint8]): string {.cdecl.} =
+func percentEncode*(
+    input: StringView, characterSet: openArray[uint8]
+): string {.cdecl.} =
   var flag = -1
 
   for i, c in input:
@@ -217,12 +220,13 @@ func percentEncode*(input: string, characterSet: openArray[uint8]): string {.cde
 
     flag = i
 
-  if flag == -1 or flag == input.len - 1:
+  let numChars = int(input.len) - 1
+  if flag == -1 or flag == numChars:
     # Optimization: Don't iterate if no character requires
     # percent encoding.
-    return input
+    return $input
 
-  var res = newStringOfCap(input.len - 1)
+  var res = newStringOfCap(numChars)
     # In the worst case, percent encoding might produce 3 characters.
 
   # res &= input[0 ..< (input.len - flag)]

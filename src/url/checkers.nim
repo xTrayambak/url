@@ -1,4 +1,5 @@
 import std/strutils
+import pkg/url/views
 
 const PathSignatureTable = block:
   var arr: array[256, uint8]
@@ -15,13 +16,13 @@ const PathSignatureTable = block:
 
   ensureMove(arr)
 
-func pathSignature*(input: string): uint8 {.inline, raises: [].} =
+func pathSignature*(input: StringView): uint8 {.inline, raises: [].} =
   # The path percent-encode set is the query percent-encode set and U+003F (?),
   # U+0060 (`), U+007B ({), and U+007D (}). The query percent-encode set is the
   # C0 control percent-encode set and U+0020 SPACE, U+0022 ("), U+0023 (#),
   # U+003C (<), and U+003E (>). The C0 control percent-encode set are the C0
   # controls and all code points greater than U+007E (~).
-  var i = 0
+  var i = 0'u32
   var accum: uint8
 
   while i + 7 < input.len:
@@ -44,7 +45,7 @@ func pathSignature*(input: string): uint8 {.inline, raises: [].} =
 
   ensureMove(accum)
 
-func isWindowsDriveLetter*(input: string): bool {.inline, raises: [].} =
+func isWindowsDriveLetter*(input: StringView): bool {.inline, raises: [].} =
   input.len >= 2 and
     (isAlphaAscii(input[0]) and ((input[1] == ':') or (input[1] == '|'))) and (
     (input.len == 2) or
