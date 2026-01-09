@@ -5,7 +5,6 @@
 ## This library (aims to) provide a WHATWG-specifications compliant URL parser in pure Nim, that does not compromise on correctness nor speed.
 ## It aims to be the go-to, no-brainer library for URL parsing for 99.9% of Nim programs.
 import std/options
-import std/options
 import pkg/url/[parser, types, url]
 import pkg/[results, shakar]
 
@@ -42,7 +41,9 @@ func parseURL*(
   ## If parsing is unsuccessful, a `URLParsingError` is thrown, which can be caught by the programmer.
   ##
   ## **Algorithm**: https://url.spec.whatwg.org/#url-parsing
-  let parsed = tryParseURL(source = source, baseUrl = baseUrl)
+  {.cast(raises: []).}:
+    let parsed = tryParseURL(source = source, baseUrl = baseUrl)
+
   if !parsed:
     raise newException(URLParsingError, $parsed.error())
 

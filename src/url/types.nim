@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[strutils, options]
-import pkg/url/unicode
+import pkg/url/[unicode, views]
 import pkg/shakar
 
 #!fmt: off
@@ -72,7 +72,7 @@ func updateBaseQuery*(url: var URL, input: Option[string], queryPercentEncodeSet
   if !input:
     url.query = input
   else:
-    url.query = some(percentEncode(&input, queryPercentEncodeSet))
+    url.query = some(percentEncode(toStringView(&input), queryPercentEncodeSet))
 
 func updateBaseQuery*(url: var URL, input: Option[string]) {.inline, raises: [].} =
   url.query = input
@@ -81,7 +81,7 @@ func `fragment=`*(url: var URL, input: Option[string]) {.inline, raises: [].} =
   if !input:
     url.fragment = input
   else:
-    url.fragment = some(percentEncode(&input, FragmentPercentEncode))
+    url.fragment = some(percentEncode(toStringView(&input), FragmentPercentEncode))
 
 func `schemeType=`*(url: var URL, input: SchemeType) {.inline, raises: [].} =
   url.specialScheme = input

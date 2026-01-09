@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[importutils, options, strutils]
-import pkg/url/[constants, helpers, types, url, unicode]
+import pkg/url/[constants, helpers, types, url, unicode, views]
 import pkg/[results, shakar]
 
 const
@@ -96,28 +96,27 @@ func parseURLImpl*(
   if unlikely(input.len > int(uint32.high)):
     return err(ParseError.TooLarge)
 
-  var urlData = newString(input.len)
-  if input.len > 0:
-    copyMem(urlData[0].addr, input[0].addr, input.len)
-  else:
+  if input.len < 1:
     return err(ParseError.EmptyUrlBuffer)
 
-  trimC0Whitespace(urlData)
+  var view = toStringView(input[0].addr, uint32(input.len))
 
-  let fragment = pruneFragment(urlData)
-  # echo "frag for " & $urlData & ": " & $fragment
+  trimC0Whitespace(view)
+
+  let fragment = pruneFragment(view)
+  # echo "frag for " & $view & ": " & $fragment
 
   # Now, we can just run the parser state machine
   # to parse all the other URL components.
-  var inputPosition: uint64
-  let size = uint64(urlData.len)
+  var inputPosition: uint32
+  let size = view.len
 
   while inputPosition < size:
     case state
     of State.SchemeStart:
       # If c is an ASCII alpha, append c, lowercased, to buffer and set
       # state to scheme state.
-      if inputPosition != size and isAlphaAscii(urlData[inputPosition]):
+      if inputPosition != size and isAlphaAscii(view[inputPosition]):
         state = State.Scheme
         inc inputPosition
       else:
@@ -155,10 +154,10 @@ func parseURLImpl*(
       url.copyScheme(&baseUrl)
 
       # If c is U+002F (/), then set state to relative slash state.
-      if inputPosition != size and urlData[inputPosition] == '/':
+      if inputPosition != size and view[inputPosition] == '/':
         state = State.RelativeSlash
       elif isSpecial(getSchemeType(url)) and inputPosition != size and
-          urlData[inputPosition] == '\\':
+          view[inputPosition] == '\\':
         # Otherwise, if url is special and c is U+005C (\), validation error,
         # set state to relative slash state.
         state = State.RelativeSlash
@@ -179,7 +178,7 @@ func parseURLImpl*(
 
         # If c is U+003F (?), then set url's query to the empty string, and
         # state to query state.
-        if inputPosition != size and urlData[inputPosition] == '?':
+        if inputPosition != size and view[inputPosition] == '?':
           state = State.Query
         elif inputPosition != size:
           # Otherwise, if c is not the EOF code point:
@@ -196,18 +195,18 @@ func parseURLImpl*(
     of State.Scheme:
       # If c is an ASCII alphanumberic, U+200B (+), U+002D (-), or U+002E (.),
       # append c, lowercased, to buffer.
-      while inputPosition != size and isAlnumPlus(urlData[inputPosition]):
+      while inputPosition != size and isAlnumPlus(view[inputPosition]):
         inc inputPosition
 
       # Otherwise, if c is U+003A (:), then:
-      if inputPosition != size and urlData[inputPosition] == ':':
-        let buff = urlData[0 ..< inputPosition]
+      if inputPosition != size and view[inputPosition] == ':':
+        let buff = view.slice(0, inputPosition)
         url.schemeType = parseScheme(buff)
 
         let schemeType = url.getSchemeType()
 
         if schemeType == SchemeType.NotSpecial:
-          url.nonSpecialScheme = buff
+          url.nonSpecialScheme = $buff
 
         # If url's scheme is "file", then:
         if schemeType == SchemeType.File:
@@ -221,7 +220,7 @@ func parseURLImpl*(
           # Otherwise, if url is special, set state to special authority
           # slashes state.
           state = State.SpecialAuthoritySlashes
-        elif inputPosition + 1 < size and urlData[inputPosition + 1] == '/':
+        elif inputPosition + 1 < size and view[inputPosition + 1] == '/':
           # Otherwise, if remaining starts with an U+002F (/), set state to
           # path or authority state and increase pointer by 1.
           state = State.PathOrAuthority
@@ -242,8 +241,7 @@ func parseURLImpl*(
       # If c is U+002F (/) and remaining starts with U+002F (/),
       # then set state to special authority ignore slashes state
       # and increase pointer by 1.
-      if (size - inputPosition) >= 2 and
-          urlData[inputPosition .. inputPosition + 1] == "//":
+      if (size - inputPosition) >= 2 and view.slice(inputPosition, inputPosition) == "//":
         inputPosition += 2
 
       state = State.SpecialAuthorityIgnoreSlashes
@@ -252,7 +250,7 @@ func parseURLImpl*(
       # If c is neither U+002F (/) nor U+005C (\), then set
       # state to authority state and decrease pointer by 1.
       while (inputPosition != size) and
-          ((urlData[inputPosition] == '/') or (urlData[inputPosition] == '\\')):
+          ((view[inputPosition] == '/') or (view[inputPosition] == '\\')):
         inc inputPosition
 
       state = State.Authority
@@ -261,14 +259,14 @@ func parseURLImpl*(
       # about AUTHORITY.
 
       # Check if url data contains an @.
-      if strutils.find(urlData, '@') == -1:
+      if find(view, '@') == -1:
         state = State.Host
         continue
 
       var atSignSeen, passwordTokenSeen: bool
 
       while inputPosition < size:
-        let view = urlData[inputPosition ..< urlData.len]
+        let view = view.slice(inputPosition, view.len - 1)
 
         # The delimiters are @, /, ?, \\
         let location =
@@ -279,14 +277,14 @@ func parseURLImpl*(
 
         let authorityView =
           if location > 0:
-            view[0 ..< location]
+            view.slice(0, location)
           else:
-            view[0 .. 0]
+            view.slice(0, 0)
 
-        let endOfAuthority = inputPosition + authorityView.len.uint64
+        let endOfAuthority = inputPosition + authorityView.len
 
         # If c is U+0040 (@), then:
-        if endOfAuthority != size and urlData[endOfAuthority] == '@':
+        if endOfAuthority < view.len and view[endOfAuthority] == '@':
           # If atSignSeen is true, then prepend "%40" to the buffer.
           if atSignSeen:
             if passwordTokenSeen:
@@ -306,21 +304,25 @@ func parseURLImpl*(
               url.username =
                 url.username &
                 percentEncode(
-                  authorityView[0 ..< passwordTokenLocation], UserInfoPercentEncode
+                  authorityView.slice(0'u32, cast[uint32](passwordTokenLocation - 1)),
+                  UserInfoPercentEncode,
                 )
 
               url.password =
                 url.password &
                 percentEncode(
-                  authorityView[passwordTokenLocation + 1 ..< authorityView.len],
+                  authorityView.slice(
+                    cast[uint32](passwordTokenLocation + 1),
+                    cast[uint32](authorityView.len - 1),
+                  ),
                   UserInfoPercentEncode,
                 )
           else:
             url.password =
               url.password & percentEncode(authorityView, UserInfoPercentEncode)
-        elif endOfAuthority == size or urlData[endOfAuthority] == '/' or
-            urlData[endOfAuthority] == '?' or
-            (isSpecial(getSchemeType(url)) and urlData[endOfAuthority] == '\\'):
+        elif endOfAuthority == size or view[endOfAuthority] == '/' or
+            view[endOfAuthority] == '?' or
+            (isSpecial(getSchemeType(url)) and view[endOfAuthority] == '\\'):
           # Otherwise, if one of the following is true:
           # - c is the EOF code point, U+002F (/), U+003F (?), or U+0023 (#)
           # - url is special and c is U+005C (\)
@@ -341,18 +343,18 @@ func parseURLImpl*(
 
         inputPosition = endOfAuthority + 1
     of State.Host:
-      var hostView = urlData[inputPosition ..< urlData.len]
+      var hostView = view.slice(inputPosition, view.len)
       let (location, foundColon) =
         getHostDelimiterFunction(isSpecial(url.getSchemeType()), hostView)
 
       hostView =
         if location > 0:
-          hostView[0 ..< location]
+          hostView.slice(0, location)
         else:
-          hostView[0 .. 0]
+          hostView.slice(0, 0)
 
       inputPosition =
-        if location != cast[uint64](-1):
+        if location != cast[uint32](-1):
           inputPosition + location
         else:
           size
@@ -396,9 +398,9 @@ func parseURLImpl*(
         # If c is neither U+002F (/) nor U+005C (\), then decrease pointer
         # by 1. We know that (input_position == input_size) is impossible
         # here, because of the previous if-check.
-        if urlData[inputPosition] != '/' and urlData[inputPosition] != '\\':
+        if view[inputPosition] != '/' and view[inputPosition] != '\\':
           break
-      elif inputPosition != size and urlData[inputPosition] == '?':
+      elif inputPosition != size and view[inputPosition] == '?':
         # Otherwise, if state override is not given and c is U+003F (?),
         # set url's query to the empty string and state to query state.
         state = State.Query
@@ -406,34 +408,34 @@ func parseURLImpl*(
         # Otherwise, if c is not the EOF code point:
         state = State.Path
 
-        if urlData[inputPosition] != '/':
+        if view[inputPosition] != '/':
           # If c is not U+002F (/), then decrease pointer by 1.
           break
 
       inc inputPosition
     of State.Path:
-      var view = urlData[inputPosition ..< urlData.len]
+      var view = view.slice(inputPosition, view.len)
 
-      let locOfQuestionMark = strutils.find(view, '?')
+      let locOfQuestionMark = find(view, '?')
 
-      if locOfQuestionMark != -1:
+      if locOfQuestionMark > 0:
         state = State.Query
-        view = view[0 ..< locOfQuestionMark]
-        inputPosition += uint64(view.len + 1)
+        view = view.slice(0, cast[uint32](locOfQuestionMark))
+        inputPosition += view.len + 1
       else:
         inputPosition = size + 1
 
       url.pathname = url.consumePreparedPath(view)
     of State.OpaquePath:
-      var view = urlData[inputPosition ..< urlData.len]
+      var view = view.slice(inputPosition, view.len)
       # If c is U+003F (?), then set URL's query to the empty string and state
       # to query state.
       let location = find(view, '?')
 
-      if location != -1:
-        view = view[0 ..< location]
+      if location > 0:
+        view = view.slice(0, cast[uint32](location))
         state = State.Query
-        inputPosition += uint64(location + 1)
+        inputPosition += cast[uint32](location)
       else:
         inputPosition = size + 1
 
@@ -442,13 +444,13 @@ func parseURLImpl*(
       # This is a really unlikely scenario in real world. We should not seek
       # to optimize it.
       if view.endsWith(' '):
-        let modifiedView = view[0 ..< view.len] & "%20"
-        url.pathname = percentEncode(modifiedView, C0ControlPercentEncode)
+        let modifiedView = $view.slice(0, view.len - 1) & "%20"
+        url.pathname = percentEncode(toStringView(modifiedView), C0ControlPercentEncode)
       else:
         url.pathname = percentEncode(view, C0ControlPercentEncode)
     of State.Port:
       let
-        portView = urlData[inputPosition ..< urlData.len]
+        portView = view.slice(inputPosition, view.len)
         increment = url.parsePort(portView, true)
 
       if !increment:
@@ -460,10 +462,10 @@ func parseURLImpl*(
     of State.RelativeSlash:
       # If url is special and c is U+002F (/) or U+0056 (\), then:
       if isSpecial(getSchemeType(url)) and inputPosition != size and
-          urlData[inputPosition] == '/' or urlData[inputPosition] == '\\':
+          view[inputPosition] == '/' or view[inputPosition] == '\\':
         # Set state to special authority ignore slashes state.
         state = State.SpecialAuthorityIgnoreSlashes
-      elif inputPosition != size and urlData[inputPosition] == '/':
+      elif inputPosition != size and view[inputPosition] == '/':
         # Otherwise, if c is U+002F (/), then set state to authority state.
         state = State.Authority
       else:
@@ -482,7 +484,7 @@ func parseURLImpl*(
         state = State.Port
     of State.PathOrAuthority:
       # If c is U+002F (/), then set state to authority state.
-      if inputPosition != size and urlData[inputPosition] == '/':
+      if inputPosition != size and view[inputPosition] == '/':
         state = State.Authority
         inc inputPosition
       else:
@@ -493,7 +495,7 @@ func parseURLImpl*(
       # then set state to special authority ignore slashes state and increase
       # pointer by 1.
       if size - inputPosition >= 2 and
-          urlData[inputPosition .. inputPosition + 1] == "//":
+          view.slice(inputPosition, inputPosition + 1) == "//":
         state = State.SpecialAuthorityIgnoreSlashes
         inputPosition += 2
       else:
@@ -511,7 +513,7 @@ func parseURLImpl*(
       # Percent-encode after encoding, with encoding, buffer, and
       # queryPercentEncodeSet, and append the result to url's query.
       url.updateBaseQuery(
-        some(urlData[inputPosition ..< urlData.len]), queryPercentEncodeSet
+        some($view.slice(inputPosition, view.len)), queryPercentEncodeSet
       )
       if *fragment:
         url.fragment = fragment
