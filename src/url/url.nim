@@ -298,10 +298,10 @@ func parseHost*(url: URL, input: StringView): Result[string, ParseError] =
     else:
       return ok(&opaque)
 
-  var buffer = toLowerAscii($input) # TODO: Prevent conversion
+  let buffer = toLowerAscii(input)
   let isForbidden = containsForbiddenDomainCodePoint(buffer)
   if isForbidden == 0 and find(buffer, "xn-") == -1:
-    return ok(ensureMove(buffer))
+    return ok(ensureMove($buffer))
 
 func consumePreparedPath*(url: URL, input: StringView): string =
   let accumulator = pathSignature(input)
