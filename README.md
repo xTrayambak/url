@@ -20,13 +20,12 @@ This benchmark was done on a AMD Ryzen 5 5600H with 12 cores (albeit none of the
 
 ```
    min time    avg time  std dv   runs name
-   4.113 ms    4.402 ms  ±0.117  x1000 treeform/urlly
-   3.183 ms    3.245 ms  ±0.048  x1000 std/uri
-   5.171 ms    5.257 ms  ±0.060   x950 xTrayambak/nim-url
+   3.923 ms    4.195 ms  ±0.088  x1000 treeform/urlly
+   2.590 ms    2.680 ms  ±0.029  x1000 std/uri
+   3.711 ms    3.814 ms  ±0.019  x1000 xTrayambak/nim-url
 ```
 
-This might seem a bit bad, but then you'd look at the features+compliance chart:
-
+## versus other libraries
 | Feature                | std/uri                                       | urlly                                               | url      |
 |------------------------|-----------------------------------------------|----------------------------------------------------|----------|
 | WHATWG Compliance      | No; it is a simple RFC 3986 compliant parser. | No; it is a simple `rfind()`/`find()` based parser. | Yes; it attempts to strictly adhere to the WHATWG URL standards and uses a parser state machine almost identical to what the specifications prescribe. |
