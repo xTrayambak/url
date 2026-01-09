@@ -238,8 +238,8 @@ func getHostDelimiterFunction*(
   # view.delete(target, target)
   (location: location, foundColon: foundColon)
 
-func containsForbiddenDomainCodePoint*(input: string): uint8 {.raises: [].} =
-  var i = 0
+func containsForbiddenDomainCodePoint*(input: StringView): uint8 {.raises: [].} =
+  var i = 0'u32
   var accum: uint8
 
   while i + 4 < input.len:
