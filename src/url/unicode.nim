@@ -220,7 +220,7 @@ func percentEncode*(
 
     flag = i
 
-  let numChars = cast[int](input.len) - 1
+  let numChars = int(input.len) - 1
   if flag == -1 or flag == numChars:
     # Optimization: Don't iterate if no character requires
     # percent encoding.

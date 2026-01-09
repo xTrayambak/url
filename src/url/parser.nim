@@ -282,6 +282,8 @@ func parseURLImpl*(
             view.slice(0, 0)
 
         let endOfAuthority = inputPosition + authorityView.len
+        # debugEcho "view size: " & $view.len & ", eoa: " & $endofauthority & ", size: " &
+        #  $size
 
         # If c is U+0040 (@), then:
         if endOfAuthority < view.len and view[endOfAuthority] == '@':
@@ -295,7 +297,7 @@ func parseURLImpl*(
           atSignSeen = true
           if not passwordTokenSeen:
             let passwordTokenLocation = authorityView.find(':')
-            passwordTokenSeen = passwordTokenLocation != -1
+            passwordTokenSeen = passwordTokenLocation > 0
 
             if not passwordTokenSeen:
               url.username =
@@ -313,16 +315,19 @@ func parseURLImpl*(
                 percentEncode(
                   authorityView.slice(
                     cast[uint32](passwordTokenLocation + 1),
-                    cast[uint32](authorityView.len - 1),
+                    cast[uint32](authorityView.len),
                   ),
                   UserInfoPercentEncode,
                 )
           else:
             url.password =
               url.password & percentEncode(authorityView, UserInfoPercentEncode)
-        elif endOfAuthority == size or view[endOfAuthority] == '/' or
-            view[endOfAuthority] == '?' or
-            (isSpecial(getSchemeType(url)) and view[endOfAuthority] == '\\'):
+        elif endOfAuthority == size or (
+          endOfAuthority < view.len and (
+            view[endOfAuthority] == '/' or view[endOfAuthority] == '?' or
+            (isSpecial(getSchemeType(url)) and view[endOfAuthority] == '\\')
+          )
+        ):
           # Otherwise, if one of the following is true:
           # - c is the EOF code point, U+002F (/), U+003F (?), or U+0023 (#)
           # - url is special and c is U+005C (\)
