@@ -99,6 +99,12 @@ func parseURLImpl*(
   if input.len < 1:
     return err(ParseError.EmptyUrlBuffer)
 
+  var input =
+    if unlikely(hasTabsOrNewline(toStringView(input))):
+      removeAsciiTabOrNewline(input)
+    else:
+      input
+
   var view = toStringView(input[0].addr, uint32(input.len))
 
   trimC0Whitespace(view)
@@ -282,8 +288,6 @@ func parseURLImpl*(
             view.slice(0, 0)
 
         let endOfAuthority = inputPosition + authorityView.len
-        # debugEcho "view size: " & $view.len & ", eoa: " & $endofauthority & ", size: " &
-        #  $size
 
         # If c is U+0040 (@), then:
         if endOfAuthority < view.len and view[endOfAuthority] == '@':

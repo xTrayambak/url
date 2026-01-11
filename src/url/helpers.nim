@@ -1,6 +1,6 @@
 ## Helper routines for the parser
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, options, strutils]
 import pkg/url/[constants, checkers, types, views]
 import pkg/shakar
@@ -68,6 +68,9 @@ const
 
     ensureMove(arr)
 
+func isTabsOrNewline*(c: char): bool {.inline, raises: [], cdecl.} =
+  c == '\r' or c == '\n' or c == '\t'
+
 func trimC0Whitespace*(input: var StringView) {.raises: [].} =
   while input.len > 0 and input[0].isC0ControlOrSpace:
     # input = input[1 ..< input.len]
@@ -108,11 +111,59 @@ func findAuthorityDelimiter*(view: StringView): uint32 {.raises: [].} =
 
   view.len
 
+func removeAsciiTabOrNewline*(input: string): string =
+  var buffer = newStringOfCap(input.len - 2)
+    # There is atleast one ASCII tab or newline if this routine is called.
+
+  for c in input:
+    if not isTabsOrNewline(c):
+      buffer &= c
+
+  ensureMove(buffer)
+
 when defined(nimUrlUseSse2):
   import std/bitops
   import pkg/nimsimd/sse2
 
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
+
+  func hasTabsOrNewline*(view: StringView): bool {.inline.} =
+    if view.len < 16:
+      # Slow path
+      for c in view:
+        if isTabsOrNewline(c):
+          return true
+
+      return false
+
+    var i = 0'u32
+    let
+      mask1 = mm_set1_epi8('\r')
+      mask2 = mm_set1_epi8('\n')
+      mask3 = mm_set1_epi8('\t')
+
+    var running: M128i
+    while i + 15 < view.len:
+      let word = mm_loadu_si128(cast[ptr M128i](view[i].addr))
+      running = mm_or_si128(
+        mm_or_si128(
+          running, mm_or_si128(mm_cmpeq_epi8(word, mask1), mm_cmpeq_epi8(word, mask2))
+        ),
+        mm_cmpeq_epi8(word, mask3),
+      )
+
+      i += 16
+
+    if i < view.len:
+      let word = mm_loadu_si128(cast[ptr M128i](view[view.len - 16].addr))
+      running = mm_or_si128(
+        mm_or_si128(
+          running, mm_or_si128(mm_cmpeq_epi8(word, mask1), mm_cmpeq_epi8(word, mask2))
+        ),
+        mm_cmpeq_epi8(word, mask3),
+      )
+
+    mm_movemask_epi8(running) != 0
 
   func findNextHostDelimiterSpecial*(view: StringView, location: uint32): uint32 =
     # First check for short strings in which case we do it naively.
@@ -178,6 +229,23 @@ else:
         return cast[uint32](pos) + location
 
     view.len
+
+  func hasTabsOrNewline*(view: StringView): bool {.inline.} =
+    var i = 0'u32
+    while i + 3 < view.len:
+      if isTabsOrNewline(view[i]) or isTabsOrNewline(view[i + 1]) or
+          isTabsOrNewline(view[i + 2]) or isTabsOrNewline(view[i + 3]):
+        return true
+
+      i += 4
+
+    while i < view.len:
+      if isTabsOrNewline(view[i]):
+        return true
+
+      inc i
+
+    false
 
 func findNextHostDelimiter*(view: StringView, location: uint32): uint32 {.inline.} =
   let str = view.slice(location, view.len - 1)
