@@ -2,5 +2,5 @@
 !*.*
 !*/
 !LICENSE
-tests/wpt/*
+tests/wpt
 bench/urls.txt
