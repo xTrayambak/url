@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, options, strutils]
-import pkg/url/[constants, checkers, types, views]
+import pkg/url/[constants, checkers, search, types, views]
 import pkg/shakar
 
 export Letters, Digits
@@ -84,7 +84,7 @@ func isAlnumPlus*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
   cast[char](c) in AlnumPlus
 
 func pruneFragment*(input: var StringView): Option[string] {.raises: [], cdecl.} =
-  let locationOfFirst = find(input, '#')
+  let locationOfFirst = findInsensitive(input, '#')
   if locationOfFirst == -1:
     return none(string)
 
@@ -270,7 +270,7 @@ func getHostDelimiterFunction*(
 
     while location < size:
       if view[location] == '[':
-        let pos = view.slice(location, view.len - 1).find(']')
+        let pos = view.slice(location, view.len - 1).findInsensitive(']')
         if pos == -1:
           location = size
           break

@@ -303,7 +303,7 @@ func parseHost*(url: URL, input: StringView): Result[string, ParseError] =
   if isForbidden == 0 and find(buffer, "xn-") == -1:
     return ok(ensureMove($buffer))
 
-  let converted = toAscii(input, cast[uint32](input.find('%')))
+  let converted = toAscii(input, cast[uint32](input.findInsensitive('%')))
   if !converted:
     return err(ParseError.CannotDecodeHost)
 
@@ -376,7 +376,8 @@ func consumePreparedPath*(url: URL, input: StringView): string =
   if fastPath:
     var previousLoc = 0
     while true:
-      var newLocation = find(input.slice(cast[uint32](previousLoc), input.len), '/')
+      var newLocation =
+        findInsensitive(input.slice(cast[uint32](previousLoc), input.len), '/')
       if newLocation == -1:
         let pathView = input.slice(0'u32, cast[uint32](previousLoc))
         if pathView == "..":

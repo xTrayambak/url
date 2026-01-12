@@ -265,7 +265,7 @@ func parseURLImpl*(
       # about AUTHORITY.
 
       # Check if url data contains an @.
-      if find(view, '@') == -1:
+      if findInsensitive(view, '@') == -1:
         state = State.Host
         continue
 
@@ -435,7 +435,7 @@ func parseURLImpl*(
     of State.Path:
       var view = view.slice(inputPosition + 1, view.len)
 
-      let locOfQuestionMark = find(view, '?')
+      let locOfQuestionMark = findInsensitive(view, '?')
 
       if locOfQuestionMark > 0:
         state = State.Query
@@ -449,7 +449,7 @@ func parseURLImpl*(
       var view = view.slice(inputPosition, view.len)
       # If c is U+003F (?), then set URL's query to the empty string and state
       # to query state.
-      let location = find(view, '?')
+      let location = findInsensitive(view, '?')
 
       if location > 0:
         view = view.slice(0, cast[uint32](location))
@@ -612,7 +612,7 @@ func parseURLImpl*(
           if base.pathname.len > 0:
             if not isWindowsDriveLetter(view.slice(inputPosition, view.len)):
               var firstBaseUrlPath = toStringView(base.pathname).slice(1, view.len)
-              let loc = firstBaseUrlPath.find('/')
+              let loc = firstBaseUrlPath.findInsensitive('/')
               if loc != -1:
                 resize(firstBaseUrlPath, uint32(loc))
 
