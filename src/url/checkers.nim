@@ -52,7 +52,9 @@ func isWindowsDriveLetter*(input: StringView): bool {.inline, raises: [].} =
     (input[2] == '/' or input[2] == '\\' or input[2] == '?' or input[2] == '#')
   )
 
-func isNormalizedWindowsDriveLetter*(input: string): bool {.inline, raises: [].} =
+func isNormalizedWindowsDriveLetter*(
+    input: string | StringView
+): bool {.inline, raises: [].} =
   input.len >= 2 and isAlphaAscii(input[0]) and input[1] == ':'
 
 func isDigit*(c: char): bool {.inline, raises: [].} =

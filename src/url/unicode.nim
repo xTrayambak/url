@@ -1,7 +1,7 @@
 ## Unicode-related routines
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/strutils
+import std/[options, strutils]
 import pkg/url/views
 
 const
@@ -202,8 +202,20 @@ const
     0x01 or 0x02 or 0x04 or 0x08 or 0x10 or 0x20 or 0x40 or 0x80,
   ]
 
+  HexToBinaryTable*: array[55, uint8] = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13,
+    14, 15,
+  ]
+
+func convertHexToBinary*(c: char): uint8 {.inline, raises: [], cdecl.} =
+  HexToBinaryTable[cast[uint8](c) - cast[uint8]('0')]
+
 func bitAt*(a: openArray[uint8], i: uint8): bool {.inline, raises: [], cdecl.} =
   return cast[bool](not (not (a[i shr 3'u8] and (1'u8 shl (i and 7'u8)))))
+
+func isAsciiHexDigit*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
+  (c >= '0' and c <= '9') or (c >= 'A' and c <= 'F') or (c >= 'a' and c <= 'f')
 
 # These are particularly hot routines, so it's best
 # we try to squeeze every last bit of performance out
@@ -240,7 +252,49 @@ func percentEncode*(
 
   ensureMove(res)
 
+func percentDecode*(input: StringView, firstPercent: uint32): string =
+  if firstPercent == cast[uint32](-1):
+    return $input
+
+  var dest = newStringOfCap(input.len)
+  dest &= $input.slice(0'u32, firstPercent)
+
+  var pntr = firstPercent
+  let stop = input.len
+
+  while pntr < stop:
+    let ch = input[pntr]
+    let remaining = stop - pntr - 1'u32
+
+    if ch != '%' or remaining < 2 or
+        (not isAsciiHexDigit(input[pntr + 1]) or not isAsciiHexDigit(input[pntr + 2])):
+      dest &= ch
+      inc pntr
+    else:
+      let
+        a = convertHexToBinary(input[pntr + 1])
+        b = convertHexToBinary(input[pntr + 2])
+
+        c = cast[char](a * 16'u8 + b)
+
+      dest &= c
+      pntr += 3
+
+  ensureMove(dest)
+
 func isForbiddenHostCodePoint*(c: char): bool {.inline, raises: [].} =
   cast[bool](IsForbiddenHostCodePointTable[cast[uint8](c)])
+
+func toAscii*(plain: StringView, firstPercent: uint32): Option[string] =
+  var percentDecodedBuffer: string
+
+  if firstPercent != cast[uint32](-1):
+    percentDecodedBuffer = percentDecode(plain, firstPercent)
+  else:
+    percentDecodedBuffer = $plain
+
+  # input is a non-empty UTF-8 string, must be percent decoded
+  # TODO: Implement this!
+  some(ensureMove(percentDecodedBuffer))
 
 {.pop.}

@@ -1,8 +1,8 @@
 ## URL parser implementation
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[importutils, options, strutils]
-import pkg/url/[constants, helpers, types, url, unicode, views]
+import pkg/url/[checkers, constants, helpers, search, types, url, unicode, views]
 import pkg/[results, shakar]
 
 const
@@ -118,6 +118,7 @@ func parseURLImpl*(
   let size = view.len
 
   while inputPosition < size:
+    debugecho $state
     case state
     of State.SchemeStart:
       # If c is an ASCII alpha, append c, lowercased, to buffer and set
@@ -404,11 +405,21 @@ func parseURLImpl*(
         # Set state to path state.
         state = State.Path
 
+        if inputPosition == size:
+          # Optimization: Avoiding going into PATH state improves the
+          # performance of URLs ending with /
+          url.pathname = "/"
+          url.fragment = fragment
+
+          return ok(ensureMove(url))
+
         # If c is neither U+002F (/) nor U+005C (\), then decrease pointer
         # by 1. We know that (input_position == input_size) is impossible
         # here, because of the previous if-check.
         if view[inputPosition] != '/' and view[inputPosition] != '\\':
           break
+
+        continue
       elif inputPosition != size and view[inputPosition] == '?':
         # Otherwise, if state override is not given and c is U+003F (?),
         # set url's query to the empty string and state to query state.
@@ -423,7 +434,7 @@ func parseURLImpl*(
 
       inc inputPosition
     of State.Path:
-      var view = view.slice(inputPosition, view.len)
+      var view = view.slice(inputPosition + 1, view.len)
 
       let locOfQuestionMark = find(view, '?')
 
@@ -528,6 +539,126 @@ func parseURLImpl*(
         url.fragment = fragment
 
       return ok(ensureMove(url))
+    of State.File:
+      let fileView = view.slice(inputPosition, view.len)
+      url.schemeType = SchemeType.File
+
+      # Set URL's host to the empty string.
+      url.hostname = none(string)
+
+      # If c is U+002F (/) or U+005C (\), then:
+      if inputPosition != size and
+          (view[inputPosition] == '/' or view[inputPosition] == '\\'):
+        # Set state to file slash state.
+        state = State.FileSlash
+      elif *baseUrl and getSchemeType(&baseUrl) == SchemeType.File:
+        # Otherwise, if base is non-null and base's scheme is "file":
+        # Set url's host to base's host, url's path to a clone of base's
+        # path, and url's query to base's query.
+        let base = &baseUrl
+
+        url.hostname = base.hostname
+        url.pathname = base.pathname
+        url.query = base.query
+        url.hasOpaquePath = base.hasOpaquePath
+
+        # If c is U+003F (?), then set url's query to the empty string and
+        # state to query state.
+        if inputPosition != size and view[inputPosition] == '?':
+          state = State.Query
+        elif inputPosition != size:
+          # Otherwise, if c is not the EOF code point:
+          # Set url's query to null.
+          url.query = none(string)
+
+          # If the code point substring from pointer to the end of input does
+          # not start with a Windows drive letter, then shorten url's path.
+          if not isWindowsDriveLetter(fileView):
+            var path = url.pathname
+            discard shortenPath(path, SchemeType.File)
+
+            url.pathname = ensureMove(path)
+          else:
+            # Otherwise:
+            # Set URL's path to an empty list.
+            url.clearPathname()
+            url.hasOpaquePath = true
+
+          # Set state to path state and decrease pointer by 1.
+          state = State.Path
+      else:
+        # Otherwise, set state to path state, and decrease pointer by 1.
+        state = State.Path
+
+      inc inputPosition
+    of State.FileSlash:
+      # If c is U+002F (/) or U+005C (\), then:
+      if inputPosition != size and
+          (view[inputPosition] == '/' or view[inputPosition] == '\\'):
+        # Set state to file host state.
+        state = State.FileHost
+        inc inputPosition
+      else:
+        # If base is non-null and base's scheme is "file", then:
+        if *baseUrl and getSchemeType(&baseUrl) == SchemeType.File:
+          let base = &baseUrl
+
+          # Set url's host to base's host.
+          url.hostname = base.hostname
+
+          # If the code point substring from pointer to the end of input does
+          # not start with a Windows drive letter and base's path[0] is a
+          # normalized Windows drive letter, then append base's path[0] to
+          # url's path.
+          if base.pathname.len > 0:
+            if not isWindowsDriveLetter(view.slice(inputPosition, view.len)):
+              var firstBaseUrlPath = toStringView(base.pathname).slice(1, view.len)
+              let loc = firstBaseUrlPath.find('/')
+              if loc != -1:
+                resize(firstBaseUrlPath, uint32(loc))
+
+              if isNormalizedWindowsDriveLetter(firstBaseUrlPath):
+                url.pathname &= '/'
+                url.pathname &= $firstBaseUrlPath
+
+        # Set state to path state, and decrease pointer by 1.
+        state = State.Path
+    of State.FileHost:
+      let
+        view = view.slice(inputPosition, view.len)
+        location = view.findAny(@['/', '\\', '?'])
+        fileHostBuffer =
+          toStringView(view.data, (if location == -1: view.len
+            else: uint32(location)))
+
+      # debugecho "fhb: " & $filehostbuffer & "; loc=" & $location
+
+      if isWindowsDriveLetter(fileHostBuffer):
+        state = State.Path
+      elif fileHostBuffer.len < 1:
+        # Set url's host to an empty string.
+        url.hostname = none(string)
+
+        # Set state to path start state.
+        state = State.PathStart
+      else:
+        let consumedBytes = fileHostBuffer.len
+        inputPosition += consumedBytes
+
+        # Let host be the result of host parsing buffer with url is not special.
+        let host = parseHost(url, fileHostBuffer)
+        if !host:
+          return ok(ensureMove(url))
+
+        debugecho "meow: " & $(&host)
+        url.hostname = some(&host)
+
+        # If host is "localhost", then set host to an empty string.
+        if *url.hostname and &url.hostname == "localhost":
+          url.hostname = none(string)
+
+        # Set buffer to an empty string and state to path start state.
+        state = State.PathStart
     else:
       break
 

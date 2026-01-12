@@ -68,6 +68,9 @@ func `password=`*(url: var URL, input: string) {.inline, raises: [].} =
 func `port=`*(url: var URL, input: Option[uint16]) {.inline, raises: [].} =
   url.port = input
 
+func `query=`*(url: var URL, input: Option[string]) {.inline, raises: [].} =
+  url.query = input
+
 func updateBaseQuery*(url: var URL, input: Option[string], queryPercentEncodeSet: openArray[uint8]) {.inline, raises: [].} =
   if !input:
     url.query = input
@@ -212,6 +215,7 @@ type
     TooLarge = "URLs more than 4 GB are not supported"
     MissingSchemeNonRelativeUrl = "the input is missing a scheme"
     HostMissing = "the input has a special scheme, but does not contain a host"
+    CannotDecodeHost = "the host cannot be decoded into ASCII"
 
   SyntaxViolation* {.pure, size: sizeof(uint8).} = enum
     Backslash = "backslash"

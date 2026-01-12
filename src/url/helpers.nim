@@ -83,9 +83,6 @@ func trimC0Whitespace*(input: var StringView) {.raises: [].} =
 func isAlnumPlus*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
   cast[char](c) in AlnumPlus
 
-func isAsciiHexDigit*(c: uint8 | char): bool {.inline, raises: [], cdecl.} =
-  (c >= '0' and c <= '9') or (c >= 'A' and c <= 'F') or (c >= 'a' and c <= 'f')
-
 func pruneFragment*(input: var StringView): Option[string] {.raises: [], cdecl.} =
   let locationOfFirst = find(input, '#')
   if locationOfFirst == -1:
@@ -323,6 +320,9 @@ func containsForbiddenDomainCodePoint*(input: StringView): uint8 {.raises: [].} 
 
   ensureMove(accum)
 
+func isForbiddenDomainCodePoint*(c: char): bool {.inline, raises: [].} =
+  cast[bool](IsForbiddenDomainCodePointTable[cast[uint8](c)])
+
 func shortenPath*(path: var string, typ: SchemeType): bool {.inline, raises: [].} =
   # Let path be url's path.
   # If url's scheme is "file", path's size is 1 and path[0] is a normalized
@@ -338,3 +338,7 @@ func shortenPath*(path: var string, typ: SchemeType): bool {.inline, raises: [].
     return true
 
   false
+
+func resize*(view: var StringView, pos: uint32) {.inline.} =
+  assert(pos <= view.len)
+  view.removeSuffix(view.len - pos)
