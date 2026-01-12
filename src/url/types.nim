@@ -179,8 +179,6 @@ func href*(url: URL): string {.inline, raises: [].} =
     output &= &url.hostname
     if *url.port:
       output &= ':' & $(&url.port)
-
-    output &= '/'
   elif not url.hasOpaquePath and url.pathname.startsWith("//"):
     output &= "/."
 

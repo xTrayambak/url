@@ -532,7 +532,7 @@ func parseURLImpl*(
       # Percent-encode after encoding, with encoding, buffer, and
       # queryPercentEncodeSet, and append the result to url's query.
       url.updateBaseQuery(
-        some($view.slice(inputPosition, view.len)), queryPercentEncodeSet
+        some($view.slice(inputPosition + 1, view.len)), queryPercentEncodeSet
       )
       if *fragment:
         url.fragment = fragment
