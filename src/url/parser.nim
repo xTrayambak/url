@@ -118,7 +118,6 @@ func parseURLImpl*(
   let size = view.len
 
   while inputPosition < size:
-    debugecho $state
     case state
     of State.SchemeStart:
       # If c is an ASCII alpha, append c, lowercased, to buffer and set
@@ -650,7 +649,6 @@ func parseURLImpl*(
         if !host:
           return ok(ensureMove(url))
 
-        debugecho "meow: " & $(&host)
         url.hostname = some(&host)
 
         # If host is "localhost", then set host to an empty string.
