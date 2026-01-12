@@ -303,6 +303,18 @@ func parseHost*(url: URL, input: StringView): Result[string, ParseError] =
   if isForbidden == 0 and find(buffer, "xn-") == -1:
     return ok(ensureMove($buffer))
 
+  let converted = toAscii(input, cast[uint32](input.find('%')))
+  if !converted:
+    return err(ParseError.CannotDecodeHost)
+
+  let value = &converted
+  for c in value:
+    if isForbiddenDomainCodePoint(c):
+      return err(ParseError.CannotDecodeHost)
+
+  # TODO: IPv4 parsing
+  return ok(value)
+
 func consumePreparedPath*(url: URL, input: StringView): string =
   let accumulator = pathSignature(input)
 
@@ -402,14 +414,14 @@ func consumePreparedPath*(url: URL, input: StringView): string =
     while true:
       var location =
         if special and cast[bool](accumulator and 2):
-          find(input, "/\\")
+          findAny(input, @['/', '\\'])
         else:
           find(input, '/')
 
       var pathView = input
       if location != -1:
-        pathView = pathView.slice(0, pathView.len - cast[uint32](location))
-        input = input.slice(cast[uint32](location) + 1'u32, input.len)
+        pathView.removeSuffix(pathView.len - cast[uint32](location))
+        input.removePrefix(cast[uint32](location) + 1'u32)
 
       let pathBuffer =
         if needsPercentEncoding:
