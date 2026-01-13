@@ -45,6 +45,26 @@ func findInsensitive*(view: views.StringView, needle: char): int =
 
       i += cap
 
+    while i + 4 < view.len:
+      let
+        j = i + 1
+        k = i + 2
+        l = i + 3
+
+      if view[i] == needle:
+        return cast[int](i)
+
+      if view[j] == needle:
+        return cast[int](j)
+
+      if view[k] == needle:
+        return cast[int](k)
+
+      if view[l] == needle:
+        return cast[int](l)
+
+      i += 4
+
     while i < view.len:
       if view[i] == needle:
         return cast[int](i)
