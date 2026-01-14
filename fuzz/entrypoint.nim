@@ -1,4 +1,4 @@
-## Fuzzing runner, uses drchaos
+## Fuzzing runner for entrypoint, uses drchaos
 ## Using clang is recommended.
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
