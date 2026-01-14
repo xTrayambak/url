@@ -3,7 +3,7 @@
 ## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, options, strutils]
 import pkg/url/[constants, checkers, search, types, views]
-import pkg/[overdrive, shakar]
+import pkg/[overdrive]
 
 export Letters, Digits
 
@@ -119,7 +119,14 @@ func removeAsciiTabOrNewline*(input: string): string =
   ensureMove(buffer)
 
 when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
-  import std/bitops
+  # TODO: Merge this flag jumbogram into Overdrive
+  const backend = getBackend()
+  when backend == VInstSet.AVX2:
+    {.passC: "-mavx2".}
+  elif backend == VInstSet.SSE4_1:
+    {.passC: "-msse4.1".}
+  elif backend == VInstSet.SSE2:
+    {.passC: "-msse2".}
 
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
 
@@ -324,7 +331,7 @@ func shortenPath*(path: var string, typ: SchemeType): bool {.inline, raises: [].
   # Remove path's last item, if any.
   let lastDelim = path.rfind('/')
   if lastDelim != -1:
-    path.delete(lastDelim, lastDelim)
+    path.delete(lastDelim .. lastDelim)
     return true
 
   false
