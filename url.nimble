@@ -11,5 +11,4 @@ srcDir = "src"
 requires "nim >= 2.2.0"
 requires "results >= 0.5.1"
 requires "benchy >= 0.0.1"
-
-requires "https://github.com/xTrayambak/overdrive >= 0.1.0"
+requires "https://github.com/xTrayambak/overdrive >= 0.1.1"

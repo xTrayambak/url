@@ -1,0 +1,41 @@
+{
+  "version": 0,
+  "packages": {
+    "nimsimd": {
+      "version": "1.3.2",
+      "commit": "3f6b2668ffb0867d0bf786a658b817763e611350",
+      "url": "https://github.com/guzba/nimsimd",
+      "checksum": "b96f4793d45e3e07ca7245cd7e87751eb6aff05a06a9b18f6838a5ce8c25c494"
+    },
+    "benchy": {
+      "version": "0.0.1",
+      "commit": "ca61d823c114e9c9ff957d3770f3fc9d0b52d3d6",
+      "url": "https://github.com/treeform/benchy",
+      "checksum": "c25295d4c51a553de144ae93b2eef85191cc92af85b4c2caa6c1c4bf44e25d3b"
+    },
+    "shakar": {
+      "version": "0.1.3",
+      "commit": "48333bf20e39519929cbcfaa3b3af60858805f35",
+      "url": "https://github.com/ferus-web/shakar",
+      "checksum": "858b8c6328e9e5a454c0f7303fe1458d3c458c7f0761b2aa518a0cf3df581a57"
+    },
+    "results": {
+      "version": "0.5.1",
+      "commit": "df8113dda4c2d74d460a8fa98252b0b771bf1f27",
+      "url": "https://github.com/arnetheduck/nim-results",
+      "checksum": "49379aaeadb08fbb4e99d1d56e713c390badd71b5f4f073c9493df7ae6bd85e4"
+    },
+    "pretty": {
+      "version": "0.2.0",
+      "commit": "9e770046c5cdf23d395d6b21c4657345481b1c76",
+      "url": "https://github.com/treeform/pretty",
+      "checksum": "a821a0b10261784a670d280759c2b1736e151e3866a3b700654cbd3e6ced4f20"
+    },
+    "gh:xTrayambak/overdrive": {
+      "version": "0.1.1",
+      "commit": "58fc995992720ea9ed8cae7c5a42d13245a5ae2a",
+      "url": "gh:xTrayambak/overdrive",
+      "checksum": "e8fd6ec89a2927a4575c13c0378a106c4434358ced3143cb41f892da45d54238"
+    }
+  }
+}
