@@ -2,7 +2,6 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/strutils
-import pkg/url/checkers
 
 func findLongestSequenceOfIpv6Pieces*(
     address: array[8, uint16], compress, compressLength: var uint64

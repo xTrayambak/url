@@ -4,3 +4,6 @@
 !LICENSE
 tests/wpt
 bench/urls.txt
+
+config.nims
+neo.paths

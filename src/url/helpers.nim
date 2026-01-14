@@ -3,7 +3,7 @@
 ## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, options, strutils]
 import pkg/url/[constants, checkers, search, types, views]
-import pkg/shakar
+import pkg/[overdrive, shakar]
 
 export Letters, Digits
 
@@ -118,14 +118,15 @@ func removeAsciiTabOrNewline*(input: string): string =
 
   ensureMove(buffer)
 
-when defined(nimUrlUseSse2):
+when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
   import std/bitops
-  import pkg/nimsimd/sse2
 
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
 
-  func hasTabsOrNewline*(view: StringView): bool {.inline.} =
-    if view.len < 16:
+  func hasTabsOrNewline*(view: views.StringView): bool {.inline.} =
+    let cap = cast[uint32](sizeof(overdrive.RegisterImpl))
+
+    if view.len < cap or getBackend() == VInstSet.Scalar:
       # Slow path
       for c in view:
         if isTabsOrNewline(c):
@@ -133,36 +134,29 @@ when defined(nimUrlUseSse2):
 
       return false
 
+    # Fast path
     var i = 0'u32
-    let
-      mask1 = mm_set1_epi8('\r')
-      mask2 = mm_set1_epi8('\n')
-      mask3 = mm_set1_epi8('\t')
+    var mask1, mask2, mask3: Vector[uint8]
+    mask1.store(cast[uint8]('\r'))
+    mask1.store(cast[uint8]('\n'))
+    mask1.store(cast[uint8]('\t'))
 
-    var running: M128i
-    while i + 15 < view.len:
-      let word = mm_loadu_si128(cast[ptr M128i](view[i].addr))
-      running = mm_or_si128(
-        mm_or_si128(
-          running, mm_or_si128(mm_cmpeq_epi8(word, mask1), mm_cmpeq_epi8(word, mask2))
-        ),
-        mm_cmpeq_epi8(word, mask3),
-      )
+    var running: Vector[uint8]
+    while i + cap < view.len:
+      var word: Vector[uint8]
+      word.store(cast[ptr uint8](view[i].addr))
+      running = ((word == mask1) or (word == mask2)) or (word == mask3)
 
-      i += 16
+      i += (cap + 1)
 
     if i < view.len:
-      let word = mm_loadu_si128(cast[ptr M128i](view[view.len - 16].addr))
-      running = mm_or_si128(
-        mm_or_si128(
-          running, mm_or_si128(mm_cmpeq_epi8(word, mask1), mm_cmpeq_epi8(word, mask2))
-        ),
-        mm_cmpeq_epi8(word, mask3),
-      )
+      var word: Vector[uint8]
+      word.store(cast[ptr uint8](view[view.len - cap].addr))
+      running = ((word == mask1) or (word == mask2)) or (word == mask3)
 
-    mm_movemask_epi8(running) != 0
+    moveMask(running) != 0'i32
 
-  func findNextHostDelimiterSpecial*(view: StringView, location: uint32): uint32 =
+  func findNextHostDelimiterSpecial*(view: views.StringView, location: uint32): uint32 =
     # First check for short strings in which case we do it naively.
     let size = view.len
     if size - location < 16:
@@ -174,46 +168,42 @@ when defined(nimUrlUseSse2):
 
       return size
 
+    let cap = cast[uint32](sizeof(overdrive.RegisterImpl)) - 1'u32
+
     # Fast path for longer strings
     var i = location
-    let
-      mask1 = mm_set1_epi8(':')
-      mask2 = mm_set1_epi8('/')
-      mask3 = mm_set1_epi8('\\')
-      mask4 = mm_set1_epi8('?')
-      mask5 = mm_set1_epi8('[')
+    var mask1, mask2, mask3, mask4, mask5: Vector[uint8]
+    mask1.store(cast[uint8](':'))
+    mask2.store(cast[uint8]('/'))
+    mask3.store(cast[uint8]('\\'))
+    mask4.store(cast[uint8]('?'))
+    mask5.store(cast[uint8]('['))
 
-    while i + 15 < size:
-      let
-        word = mm_loadu_si128(cast[ptr M128i](view[i].addr))
-        m1 = mm_cmpeq_epi8(word, mask1)
-        m2 = mm_cmpeq_epi8(word, mask2)
-        m3 = mm_cmpeq_epi8(word, mask3)
-        m4 = mm_cmpeq_epi8(word, mask4)
-        m5 = mm_cmpeq_epi8(word, mask5)
+    while i + cap < size:
+      var word: Vector[uint8]
+      word.store(cast[ptr uint8](view[i].addr))
 
-        m = mm_or_si128(mm_or_si128(mm_or_si128(m1, m2), mm_or_si128(m3, m4)), m5)
+      let m =
+        ((word == mask1 or word == mask2) or (word == mask3 or word == mask4)) or
+        word == mask5
 
-      let mask: int32 = mm_movemask_epi8(m)
+      let mask: int32 = moveMask(m)
       if mask != 0:
         return i + cast[uint32](builtin_ctzl(cast[uint64](mask)))
 
-      i += 16
+      i += (cap + 1'u32)
 
     if i < size:
-      let
-        word = mm_loadu_si128(cast[ptr M128i](view[size - 16].addr))
-        m1 = mm_cmpeq_epi8(word, mask1)
-        m2 = mm_cmpeq_epi8(word, mask2)
-        m3 = mm_cmpeq_epi8(word, mask3)
-        m4 = mm_cmpeq_epi8(word, mask4)
-        m5 = mm_cmpeq_epi8(word, mask5)
+      var word: Vector[uint8]
+      word.store(cast[ptr uint8](view[size - (cap + 1'u32)].addr))
 
-        m = mm_or_si128(mm_or_si128(mm_or_si128(m1, m2), mm_or_si128(m3, m4)), m5)
+      let m =
+        ((word == mask1 or word == mask2) or (word == mask3 or word == mask4)) or
+        word == mask5
 
-      let mask: int32 = mm_movemask_epi8(m)
+      let mask: int32 = moveMask(m)
       if mask != 0:
-        return size - 16 + cast[uint32](builtin_ctzl(cast[uint64](mask)))
+        return size - (cap + 1'u32) + cast[uint32](builtin_ctzl(cast[uint64](mask)))
 
     size
 else:

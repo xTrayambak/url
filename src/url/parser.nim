@@ -272,25 +272,25 @@ func parseURLImpl*(
       var atSignSeen, passwordTokenSeen: bool
 
       while inputPosition < size:
-        let view = view.slice(inputPosition, view.len - 1)
+        let offsetView = view.slice(inputPosition, view.len)
 
         # The delimiters are @, /, ?, \\
         let location =
           if isSpecial(url.getSchemeType()):
-            findAuthorityDelimiterSpecial(view)
+            findAuthorityDelimiterSpecial(offsetView)
           else:
-            findAuthorityDelimiter(view)
+            findAuthorityDelimiter(offsetView)
 
         let authorityView =
           if location > 0:
-            view.slice(0, location)
+            offsetView.slice(0, location)
           else:
-            view.slice(0, 0)
+            offsetView.slice(0, 0)
 
         let endOfAuthority = inputPosition + authorityView.len
 
         # If c is U+0040 (@), then:
-        if endOfAuthority < view.len and view[endOfAuthority] == '@':
+        if endOfAuthority < size and view[endOfAuthority] == '@':
           # If atSignSeen is true, then prepend "%40" to the buffer.
           if atSignSeen:
             if passwordTokenSeen:
@@ -310,7 +310,7 @@ func parseURLImpl*(
               url.username =
                 url.username &
                 percentEncode(
-                  authorityView.slice(0'u32, cast[uint32](passwordTokenLocation - 1)),
+                  authorityView.slice(0'u32, cast[uint32](passwordTokenLocation)),
                   UserInfoPercentEncode,
                 )
 
