@@ -1,7 +1,7 @@
 ## URL parser implementation
 ##
 ## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[importutils, options, strutils]
+import std/[options, strutils]
 import pkg/url/[checkers, constants, helpers, search, types, url, unicode, views]
 import pkg/[results, shakar]
 
