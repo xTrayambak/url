@@ -22,6 +22,10 @@ jobs:
           nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Ensure Nim is in PATH
+        run: |
+          echo "${{ github.workspace }}/.nim_runtime/bin" >> $GITHUB_PATH
+
       - name: Install nim-url
         run: nimble install
 
