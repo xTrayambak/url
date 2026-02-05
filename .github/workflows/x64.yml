@@ -6,14 +6,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      #- name: Cache nimble
-      #  id: cache-nim
-      #  uses: actions/cache@v4
-      #  with:
-      #    path: .nim_runtime
-      #    key: ${{ runner.os }}-nimble-x64-${{ hashFiles('*.nimble') }}
-      #    restore-keys: |
-      #      ${{ runner.os }}-nimble-
+      - name: Cache nimble
+        id: cache-nim
+        uses: actions/cache@v4
+        with:
+          path: .nim_runtime
+          key: ${{ runner.os }}-nimble-x64-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-nimble-
        
       - name: Setup Nim
         if: steps.cache-nim.outputs.cache-hit != 'true'
@@ -22,9 +22,9 @@ jobs:
           nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Ensure Nim is in PATH
-      #  run: |
-      #    echo "${{ github.workspace }}/.nim_runtime/bin" >> $GITHUB_PATH
+      - name: Ensure Nim is in PATH
+        run: |
+          echo "${{ github.workspace }}/.nim_runtime/bin" >> $GITHUB_PATH
 
       - name: Install nim-url
         run: nimble install
