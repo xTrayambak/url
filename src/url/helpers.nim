@@ -166,7 +166,7 @@ when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
 
       return size
 
-    const cap = when hasAvx2: 32'u32 else: 16'u32
+    const cap = when hasAvx2: 31'u32 else: 15'u32
 
     # Fast path for longer strings
     var i = location
