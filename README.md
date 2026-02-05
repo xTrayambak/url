@@ -8,6 +8,7 @@ It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of N
 - Full support for IPv6 parsing and compression.
 - Support for opaque paths.
 - Support for relative-base URL pairs.
+- **SIMD acceleration when appropriate on ARM and AMD64 CPUs.**
 
 ## safety
 `nim-url` is fuzzed regularly using libFuzzer and in the most recent fuzzing session (with ~3.4 **million** mutations), no crashes, undefined behaviour or denial of service problems were detected. This was with `--define:danger` turned on.
@@ -64,10 +65,6 @@ except url.URLParsingError as exc:
     echo "oof ouch owie my bones"
     echo exc.msg # Contains the error message as to why the parsing failed
 ```
-
-## acceleration
-Some routines in this library are SIMD-accelerated. If you wish to exploit them, append the following flags depending on your binary's architecture target:
-- `nimUrlUseSse2`: Enable SSE2 acceleration where possible (x86 and x64 systems)
 
 ## contributing
 This library welcomes contributions from everyone, but I do recommend you to read [the contributors' guide](CONTRIBUTING.md) prior to making any merge requests or issues.
