@@ -122,7 +122,7 @@ when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
 
   func hasTabsOrNewline*(view: views.StringView): bool {.inline.} =
-    let cap = cast[uint32](sizeof(overdrive.RegisterImpl))
+    const cap = when hasAvx2: 32'u32 else: 16'u32
 
     if view.len < cap or getBackend() == VInstSet.Scalar:
       # Slow path
@@ -166,7 +166,7 @@ when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
 
       return size
 
-    let cap = cast[uint32](sizeof(overdrive.RegisterImpl)) - 1'u32
+    const cap = when hasAvx2: 32'u32 else: 16'u32
 
     # Fast path for longer strings
     var i = location
