@@ -1,5 +1,5 @@
 import std/unittest
-import pkg/[shakar, url, pretty]
+import pkg/[shakar, url]
 
 suite "basic URL parsing tests":
   test "the cakewalk urls":
@@ -55,4 +55,4 @@ suite "basic URL parsing tests":
 
   test "expect error when port is beyond 65535":
     expect URLParsingError:
-      let url1 = parseURL("https://google.com:65536")
+      let url1 {.used.} = parseURL("https://google.com:65536")

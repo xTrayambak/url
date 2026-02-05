@@ -1,6 +1,6 @@
 ## IPv6 parsing tests
 import std/unittest
-import pkg/[url, shakar, pretty]
+import pkg/[url, shakar]
 
 suite "IPv6 parsing tests":
   test "basics":

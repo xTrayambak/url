@@ -1,6 +1,5 @@
 import std/[options, unittest]
 import pkg/url, pkg/shakar
-import pkg/pretty
 
 # FIXME: This is a very weird quirk. Browsers implement it differently,
 # but so does ada-url. The spec is implemented properly in nim-url,

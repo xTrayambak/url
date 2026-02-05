@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2026 Trayambak Rai (xtrayambak@disroot.org)
 import std/unittest
-import pkg/[pretty, shakar, url]
+import pkg/[shakar, url]
 
 suite "path URL parsing":
   test "basics":

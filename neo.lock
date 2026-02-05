@@ -25,12 +25,6 @@
       "url": "https://github.com/arnetheduck/nim-results",
       "checksum": "49379aaeadb08fbb4e99d1d56e713c390badd71b5f4f073c9493df7ae6bd85e4"
     },
-    "pretty": {
-      "version": "0.2.0",
-      "commit": "9e770046c5cdf23d395d6b21c4657345481b1c76",
-      "url": "https://github.com/treeform/pretty",
-      "checksum": "a821a0b10261784a670d280759c2b1736e151e3866a3b700654cbd3e6ced4f20"
-    },
     "gh:xTrayambak/overdrive": {
       "version": "0.1.1",
       "commit": "58fc995992720ea9ed8cae7c5a42d13245a5ae2a",
