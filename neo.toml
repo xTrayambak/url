@@ -1,5 +1,6 @@
 [package]
 name = "url"
+description = "A fast, standards-compliant WHATWG URL parser in pure Nim"
 version = "0.1.5"
 license = "BSD-3-Clause"
 kind = "Library"

@@ -119,15 +119,6 @@ func removeAsciiTabOrNewline*(input: string): string =
   ensureMove(buffer)
 
 when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
-  # TODO: Merge this flag jumbogram into Overdrive
-  const backend = getBackend()
-  when backend == VInstSet.AVX2:
-    {.passC: "-mavx2".}
-  elif backend == VInstSet.SSE4_1:
-    {.passC: "-msse4.1".}
-  elif backend == VInstSet.SSE2:
-    {.passC: "-msse2".}
-
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
 
   func hasTabsOrNewline*(view: views.StringView): bool {.inline.} =
