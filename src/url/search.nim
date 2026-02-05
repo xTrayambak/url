@@ -32,7 +32,7 @@ func findInsensitive*(view: views.StringView, needle: char): int =
     var target: Vector[uint8]
     target.store(cast[uint8](needle))
 
-    let cap = uint32(sizeof(overdrive.RegisterImpl))
+    const cap = when hasAvx2: 32'u32 else: 16'u32
 
     while i + cap <= view.len:
       var blk: Vector[uint8]
