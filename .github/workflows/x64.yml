@@ -10,8 +10,8 @@ jobs:
         id: cache-nimble
         uses: actions/cache@v4
         with:
-          path: ~/.nimble
-          key: ${{ runner.os }}-nimble
+          path: .nim_runtime
+          key: ${{ runner.os }}-nimble-${{ hashFiles('*.nimble') }}
           restore-keys: |
             ${{ runner.os }}-nimble-
       - uses: jiro4989/setup-nim-action@v2
