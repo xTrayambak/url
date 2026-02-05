@@ -7,16 +7,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Cache nimble
-        id: cache-nimble
+        id: cache-nim
         uses: actions/cache@v4
         with:
           path: .nim_runtime
           key: ${{ runner.os }}-nimble-${{ hashFiles('*.nimble') }}
           restore-keys: |
             ${{ runner.os }}-nimble-
-      - uses: jiro4989/setup-nim-action@v2
+       
+      - name: Setup Nim
+        if: steps.cache-nim.outputs.cache-hit != 'true'
+        uses: jiro4989/setup-nim-action@v2
         with:
           nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nimble install
-      - run: nimble test
+
+      - name: Install nim-url
+        run: nimble install
+
+      - name: Run test suite
+        run: nimble test
