@@ -1,0 +1,42 @@
+name: Documentation
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Cache nimble
+        id: cache-nim
+        uses: actions/cache@v4
+        with:
+          path: .nim_runtime
+          key: ${{ runner.os }}-nimble-x64-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-nimble-
+       
+      - name: Setup Nim
+        if: steps.cache-nim.outputs.cache-hit != 'true'
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.4'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure Nim is in PATH
+        run: |
+          echo "${{ github.workspace }}/.nim_runtime/bin" >> $GITHUB_PATH
+
+      - name: Run docgen
+        run: nim c -r tools/docgen.nim
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+
+      - name: Deploy pages
+        id: deployment
+        uses: actions/deploy-pages@v4
