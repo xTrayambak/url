@@ -26,10 +26,10 @@
       "checksum": "49379aaeadb08fbb4e99d1d56e713c390badd71b5f4f073c9493df7ae6bd85e4"
     },
     "gh:xTrayambak/overdrive": {
-      "version": "0.1.1",
-      "commit": "58fc995992720ea9ed8cae7c5a42d13245a5ae2a",
+      "version": "0.2.0",
+      "commit": "13cf1cab8157f4aebd6f1313c8203d0576e42539",
       "url": "gh:xTrayambak/overdrive",
-      "checksum": "e8fd6ec89a2927a4575c13c0378a106c4434358ced3143cb41f892da45d54238"
+      "checksum": "83eec5d8addec46c1f1060b47d6b30d74f89be6cfc0b57f1c18f76b7bf06c9d0"
     }
   }
 }
