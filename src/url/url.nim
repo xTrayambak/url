@@ -1,6 +1,6 @@
 ## Separate URL parsing routines
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 import std/[options, strutils, math]
 import pkg/url/[checkers, helpers, search, serializers, types, unicode, views]
 import pkg/[results, shakar]

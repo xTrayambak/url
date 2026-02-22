@@ -1,9 +1,9 @@
 ## Serialization routines
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 import std/strutils
 
-func findLongestSequenceOfIpv6Pieces*(
+func findLongestSequenceOfIpv6Pieces(
     address: array[8, uint16], compress, compressLength: var uint64
 ) {.raises: [].} =
   var i: uint64
@@ -24,6 +24,7 @@ func findLongestSequenceOfIpv6Pieces*(
     inc i
 
 func serializeIpv6*(address: array[8, uint16]): string {.raises: [].} =
+  ## Given an array of 8 `uint16`(s), serialize them into an IPv6 string representation.
   var
     compressLength = 0'u64
     compress = 0'u64

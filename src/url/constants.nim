@@ -1,6 +1,6 @@
 ## Constants from various WHATWG specs
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 import std/strutils
 
 type AsciiSet* = set[char] | set[uint8]

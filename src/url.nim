@@ -1,9 +1,32 @@
 ## =======
-## nim-url
+## url
 ## =======
 ## 
-## This library (aims to) provide a WHATWG-specifications compliant URL parser in pure Nim, that does not compromise on correctness nor speed.
-## It aims to be the go-to, no-brainer library for URL parsing for 99.9% of Nim programs.
+## This library provides a WHATWG-specifications compliant URL parser in pure Nim, that does not compromise on correctness nor speed.
+## 
+## # Basic Usage
+
+## ## Parse URL with Exceptions
+## .. code-block:: nim
+##   import pkg/url
+##
+##   let a = parseURL("https://google.com")
+##   echo a.hostname
+##
+##   try:
+##     let badUrl = parseURL("")
+##   except url.URLParsingError as exc:
+##     echo exc.msg
+
+## ## Parse URL with Results
+## .. code-block:: nim
+##   import pkg/[results, url]
+##
+##   let a = tryParseURL("https://google.com")
+##   assert(isOk(a))
+##
+##   let badUrl = tryParseURL("")
+##   assert(not isOk(a))
 import std/options
 import pkg/url/[parser, types, url]
 import pkg/[results, shakar]

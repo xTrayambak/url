@@ -1,6 +1,6 @@
 ## Helper routines for the parser
 ##
-## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 import std/[math, options, strutils]
 import pkg/url/[constants, checkers, search, types, views]
 import pkg/[overdrive]

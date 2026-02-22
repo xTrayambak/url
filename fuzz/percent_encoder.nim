@@ -1,6 +1,6 @@
 ## Fuzzing runner for percent-encode function.
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 #!fmt: off
 import pkg/drchaos,
        pkg/url/[unicode, views]

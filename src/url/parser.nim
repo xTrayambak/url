@@ -1,6 +1,6 @@
 ## URL parser implementation
 ##
-## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 import std/[options, strutils]
 import pkg/url/[checkers, constants, helpers, search, types, url, unicode, views]
 import pkg/[results, shakar]
@@ -86,6 +86,8 @@ func parseURLImpl*(
 ): Result[URL, ParseError] =
   ## This is the main routine that handles the parsing
   ## of a URL string into its structural representation.
+  ##
+  ## **NOTE**: It is not intended to be called directly and is part of the private API.
 
   var state = State.SchemeStart
   var url: URL
