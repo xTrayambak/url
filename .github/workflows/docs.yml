@@ -35,7 +35,7 @@ jobs:
           echo "${{ github.workspace }}/.nim_runtime/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: nimble install
+        run: nimble install -y
 
       - name: Run docgen
         run: nim c -r tools/docgen.nim

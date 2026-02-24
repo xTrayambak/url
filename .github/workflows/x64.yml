@@ -27,7 +27,7 @@ jobs:
           echo "${{ github.workspace }}/.nim_runtime/bin" >> $GITHUB_PATH
 
       - name: Install nim-url
-        run: nimble install
+        run: nimble install -y
 
       - name: Run test suite (SSE2)
         run: echo "-d:sse2" > nim.cfg && nimble test

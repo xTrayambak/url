@@ -1,0 +1,40 @@
+name: Periodic Fuzzer Run
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+  workflow_dispatch:
+
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [avx2, sse41, sse2, sse3, nimUrlNoSimd]
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Nim
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.4'
+
+      - name: Install dependencies
+        run: nimble install -y
+
+      - name: Compile fuzzing runner
+        run: nim c -d:release -d:danger -d:${{ matrix.arch }} fuzz/runner.nim
+
+      - name: Run fuzzing runner
+        run: timeout 10m ./fuzz/runner || [[ $? -eq 124 ]]
+
+      - name: Upload crash input
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-${{ matrix.arch }}
+          path: crash-*
