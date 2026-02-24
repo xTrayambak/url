@@ -425,6 +425,7 @@ func parseURLImpl*(
         # Otherwise, if state override is not given and c is U+003F (?),
         # set url's query to the empty string and state to query state.
         state = State.Query
+        continue
       elif inputPosition != size:
         # Otherwise, if c is not the EOF code point:
         state = State.Path
