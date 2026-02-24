@@ -17,13 +17,13 @@ It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of N
 In `bench/runner.nim`, this library is tested against `std/uri` (the standard library's **URI** parser — not a **URL** parser!) and treeform's `urlly` library.
 This benchmark was done on a AMD Ryzen 5 5600H with 12 cores (albeit none of these parsers use any multithreading techniques, as those are a bit unnecessary).
 
-**Compile Flags Used**: `--define:release --define:nimUrlUseSse2 --define:danger`
+**Compile Flags Used**: `--define:release --define:avx2 --define:danger`
 
 ```
    min time    avg time  std dv   runs name
-   3.923 ms    4.195 ms  ±0.088  x1000 treeform/urlly
-   2.590 ms    2.680 ms  ±0.029  x1000 std/uri
-   3.711 ms    3.814 ms  ±0.019  x1000 xTrayambak/nim-url
+   3.412 ms    3.892 ms  ±0.094  x1000 treeform/urlly
+   2.579 ms    2.670 ms  ±0.033  x1000 std/uri
+   3.807 ms    3.944 ms  ±0.062  x1000 xTrayambak/nim-url
 ```
 
 ## versus other libraries
@@ -71,5 +71,7 @@ This library welcomes contributions from everyone, but I do recommend you to rea
 
 ## attributions
 This library's parsing logic is heavily based on the amazing work done by Daniel Lemire and Yagiz Nizipli, et al. on [ada-url](https://github.com/ada-url/ada).
+
+[@bptato](https://github.com/bptato)'s suggestions helped reduce the `URL` struct's size.
 
 Some parts of the API have borrowed inspiration from the nice programming interface provided by the Servo project's [rust-url](https://github.com/servo/rust-url) crate.
