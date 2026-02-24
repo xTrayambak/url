@@ -29,5 +29,14 @@ jobs:
       - name: Install nim-url
         run: nimble install
 
-      - name: Run test suite
-        run: nimble test
+      - name: Run test suite (SSE2)
+        run: echo "-d:sse2" > nim.cfg && nimble test
+
+      - name: Run test suite (SSE3)
+        run: echo "-d:sse3" > nim.cfg && nimble test
+
+      - name: Run test suite (SSE4.1)
+        run: echo "-d:sse41" > nim.cfg && nimble test
+
+      - name: Run test suite (AVX2)
+        run: echo "-d:avx2" > nim.cfg && nimble test
