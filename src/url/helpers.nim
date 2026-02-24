@@ -192,16 +192,25 @@ when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
       i += (cap + 1'u32)
 
     if i < size:
-      var word: Vector[uint8]
-      word.store(cast[ptr uint8](view[size - (cap + 1'u32)].addr))
+      when cap == 15:
+        var word: Vector[uint8]
+        word.store(cast[ptr uint8](view[size - (cap + 1'u32)].addr))
 
-      let m =
-        ((word == mask1 or word == mask2) or (word == mask3 or word == mask4)) or
-        word == mask5
+        let m =
+          ((word == mask1 or word == mask2) or (word == mask3 or word == mask4)) or
+          word == mask5
 
-      let mask: int32 = moveMask(m)
-      if mask != 0:
-        return size - (cap + 1'u32) + cast[uint32](builtin_ctzl(cast[uint64](mask)))
+        let mask: int32 = moveMask(m)
+        if mask != 0:
+          return size - (cap + 1'u32) + cast[uint32](builtin_ctzl(cast[uint64](mask)))
+      else:
+        # TODO: Write an AVX2 version. The upper branch only works on 16-byte registers
+        # that NEON/SSE provide.
+        while i < size:
+          if SpecialHostDelimiters[cast[uint8](view[i])] == 1:
+            return cast[uint32](i) + location
+
+          inc i
 
     size
 else:
