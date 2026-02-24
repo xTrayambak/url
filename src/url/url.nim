@@ -83,7 +83,7 @@ func parseScheme*(scheme: StringView): SchemeType =
 
   SchemeType.NotSpecial
 
-func parseIpv6(input: StringView): Result[string, ParseError] =
+func parseIpv6*(input: StringView): Result[string, ParseError] =
   if input.len < 1:
     return err(ParseError.InvalidIPv6Address)
 
