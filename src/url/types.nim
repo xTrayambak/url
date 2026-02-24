@@ -17,12 +17,12 @@ type
     Wss = 5
     File = 6
   
-  URLFlag {.pure, size: sizeof(uint8).} = enum
-    HasHostname
-    HasQuery
-    HasFragment
-    HasPort
-    HasOpaquePath
+  URLFlag* {.pure, size: sizeof(uint8).} = enum
+    HasHostname ## The URL has a valid hostname parameter.
+    HasQuery ## The URL has a valid query/search parameter.
+    HasFragment ## The URL has a valid fragment/hash parameter.
+    HasPort ## The URL has a valid port parameter.
+    HasOpaquePath ## The URL has an opaque path parameter.
 
   URL* = object
     ## This is the core URL structure outputted by this library.
@@ -81,6 +81,14 @@ func updateBaseQuery*(url: var URL, input: Option[string]) {.inline, raises: [].
     url.flags.incl(URLFlag.HasQuery)
   else:
     url.flags.excl(URLFlag.HasQuery)
+
+func flags*(url: URL): set[URLFlag] {.inline, raises: [].} =
+  ## The `URL` struct uses `URLFlag`(s) internally to keep the data in a desirable layout.
+  ## This getters lets you read these flags for your own logic.
+  ##
+  ## **Note**: These flags are only mutable via the setters provided,
+  ## and cannot be manually mutated, just to ensure coherency and prevent bugs.
+  url.flags
 
 func `fragment=`*(url: var URL, input: Option[string]) {.inline, raises: [].} =
   if !input:
