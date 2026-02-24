@@ -24,7 +24,9 @@ jobs:
           nim-version: '2.2.4'
 
       - name: Install dependencies
-        run: nimble install -y
+        run: |
+          nimble install -y
+          nimble install drchaos
 
       - name: Compile fuzzing runner
         run: nim c -d:release -d:danger -d:${{ matrix.arch }} fuzz/entrypoint.nim
