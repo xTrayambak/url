@@ -39,7 +39,7 @@ proc `=copy`*(dest: var StringView, source: StringView) =
 
 template `[]`*(view: StringView, i: uint32): char =
   ## **NOTE**: This does not apply flags.
-  when not defined(release):
+  when not defined(danger):
     assert(view.size > i)
 
   cast[ptr char]((cast[uint64](view.data) + cast[uint64](i)))[]
@@ -58,32 +58,33 @@ template len*(view: StringView): uint32 =
   view.size
 
 template removePrefix*(view: var StringView, i: uint32) =
-  when not defined(release):
+  when not defined(danger):
     assert i <= view.size
 
   view.data = cast[ptr char](cast[uint64](view.data) + cast[uint64](i))
   view.size -= i
 
 template removeSuffix*(view: var StringView, i: uint32) =
-  when not defined(release):
+  when not defined(danger):
     assert i <= view.size
 
   view.size -= i
 
 template beyond*(view: StringView, offset: uint32): StringView =
-  when not defined(release):
+  when not defined(danger):
     assert offset <= view.size
 
   StringView(
     data: cast[ptr char](cast[uint64](view.data) + cast[uint64](offset)),
-    size: view.size,
+    size: view.size - offset,
   )
 
-template slice*(view: StringView, start: uint32, stop: uint32): StringView =
-  when not defined(release):
-    assert stop >= start
+func slice*(view: StringView, start: uint32, stop: uint32): StringView =
+  when not defined(danger):
+    assert stop >= start and stop <= view.len, "start: " & $start & "; stop: " & $stop
 
-  # debugecho "start: " & $start & ", stop: " & $stop & ", osize: " & $view.len
+  #debugecho "start: " & $start & ", stop: " & $stop & ", osize: " & $view.len &
+  #  ", target: 0x" & $cast[uint64](view.data).toHex
   StringView(
     data: cast[ptr char](cast[uint64](view.data) + cast[uint64](start)),
     size: stop - start,
@@ -166,6 +167,9 @@ func toStringView*(data: ptr char, size: uint32): StringView {.inline.} =
 
 func toStringView*(str: string): StringView {.inline.} =
   let size = uint32(len(str))
+
+  when not defined(danger):
+    assert(size != 0)
 
   StringView(
     data:

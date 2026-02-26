@@ -118,17 +118,11 @@ func removeAsciiTabOrNewline*(input: string): string =
 
   ensureMove(buffer)
 
-when getBackend() == VInstSet.AVX2 and not defined(nimUrlUseVulnerableAVX2):
-  {.
-    error:
-      "AVX2 support has been currently disabled due to a vulnerability. Please wait until it is fixed!"
-  .}
-
 when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
 
   func hasTabsOrNewline*(view: views.StringView): bool {.inline.} =
-    const cap = when hasAvx2: 32'u32 else: 16'u32
+    const cap = when hasAvx2: 31'u32 else: 15'u32
 
     if view.len < cap or getBackend() == VInstSet.Scalar:
       # Slow path
@@ -214,7 +208,7 @@ when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
         # that NEON/SSE provide.
         while i < size:
           if SpecialHostDelimiters[cast[uint8](view[i])] == 1:
-            return cast[uint32](i) + location
+            return cast[uint32](i)
 
           inc i
 

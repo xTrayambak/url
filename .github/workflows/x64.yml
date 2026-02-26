@@ -39,4 +39,4 @@ jobs:
         run: echo "-d:sse41" > nim.cfg && nimble test
 
       - name: Run test suite (AVX2)
-        run: echo -e "-d:avx2\n-d:nimUrlUseVulnerableAvx2" > nim.cfg && nimble test
+        run: echo -e "-d:avx2" > nim.cfg && nimble test

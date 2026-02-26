@@ -111,6 +111,8 @@ func parseURLImpl*(
     return err(ParseError.EmptyUrlBuffer)
 
   var view = toStringView(input[0].addr, uint32(input.len))
+  #debugecho "original view: " & toHex(cast[uint64](view[0].addr)) & ", size: " &
+  #  $input.len
 
   trimC0Whitespace(view)
 
