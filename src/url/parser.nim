@@ -107,6 +107,9 @@ func parseURLImpl*(
     else:
       input
 
+  if input.len < 1:
+    return err(ParseError.EmptyUrlBuffer)
+
   var view = toStringView(input[0].addr, uint32(input.len))
 
   trimC0Whitespace(view)
