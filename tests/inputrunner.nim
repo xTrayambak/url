@@ -6,6 +6,7 @@ proc main() {.inline.} =
     quit "Expected 1 param: input name"
 
   let data = readFile("tests" / "inputs" / paramStr(1) & ".bin")
+  echo "Data: " & $data.repr
   let u {.used.} = tryParseUrl(data)
 
   if !u:
