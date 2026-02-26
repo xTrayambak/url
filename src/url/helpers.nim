@@ -118,7 +118,7 @@ func removeAsciiTabOrNewline*(input: string): string =
 
   ensureMove(buffer)
 
-when getBackend() == VInstSet.AVX2:
+when getBackend() == VInstSet.AVX2 and not defined(nimUrlUseVulnerableAVX2):
   {.
     error:
       "AVX2 support has been currently disabled due to a vulnerability. Please wait until it is fixed!"

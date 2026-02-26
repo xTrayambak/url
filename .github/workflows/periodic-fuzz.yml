@@ -29,7 +29,7 @@ jobs:
           nimble install drchaos
 
       - name: Compile fuzzing runner
-        run: nim c -d:release -d:danger -d:${{ matrix.arch }} fuzz/entrypoint.nim
+        run: nim c -d:release -d:danger -d:nimUrlUseVulnerableAvx2 -d:${{ matrix.arch }} fuzz/entrypoint.nim
 
       - name: Run fuzzing runner
         run: timeout 10m ./fuzz/entrypoint || [[ $? -eq 124 ]]
