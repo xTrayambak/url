@@ -11,7 +11,7 @@ It eventually aims to become the de-facto/go-to/no-brainer option for 99.9% of N
 - **SIMD acceleration when appropriate on ARM and AMD64 CPUs.**
 
 ## safety
-`nim-url` is fuzzed regularly using libFuzzer and in the most recent fuzzing session (with ~3.4 **million** mutations), no crashes, undefined behaviour or denial of service problems were detected. This was with `--define:danger` turned on.
+`nim-url` is fuzzed multiple times every day using libFuzzer (`drchaos`) in the CI pipeline.
 
 ## speed
 In `bench/runner.nim`, this library is tested against `std/uri` (the standard library's **URI** parser — not a **URL** parser!) and treeform's `urlly` library.
