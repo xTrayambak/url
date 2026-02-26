@@ -118,12 +118,11 @@ func removeAsciiTabOrNewline*(input: string): string =
 
   ensureMove(buffer)
 
-static:
-  if getBackend() == VInstSet.AVX2:
-    {.
-      error:
-        "AVX2 support has been currently disabled due to a vulnerability. Please wait until it is fixed!"
-    .}
+when getBackend() == VInstSet.AVX2:
+  {.
+    error:
+      "AVX2 support has been currently disabled due to a vulnerability. Please wait until it is fixed!"
+  .}
 
 when getBackend() != VInstSet.Scalar and not defined(nimUrlNoSimd):
   func builtin_ctzl(x: uint64): int32 {.importc: "__builtin_ctzl".}
