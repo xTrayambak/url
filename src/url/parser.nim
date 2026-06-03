@@ -510,6 +510,7 @@ func parseURLImpl*(
         url.hostname = base.hostname
         url.port = base.port
 
+        dec inputPosition
         state = State.Path
     of State.PathOrAuthority:
       # If c is U+002F (/), then set state to authority state.
