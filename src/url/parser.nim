@@ -157,7 +157,6 @@ func parseURLImpl*(
       elif getSchemeType(&baseUrl) != SchemeType.File:
         # Otherwise, if base's scheme is not "file", set state
         # to relative state and decrease pointer by 1.
-        dec inputPosition
         state = State.RelativeScheme
       else:
         # Otherwise, set state to file state and decrease pointer by 1.
@@ -205,6 +204,8 @@ func parseURLImpl*(
 
           # Set state to path state and decrease pointer by 1.
           state = State.Path
+
+      inc inputPosition
     of State.Scheme:
       # If c is an ASCII alphanumberic, U+200B (+), U+002D (-), or U+002E (.),
       # append c, lowercased, to buffer.
@@ -254,7 +255,8 @@ func parseURLImpl*(
       # If c is U+002F (/) and remaining starts with U+002F (/),
       # then set state to special authority ignore slashes state
       # and increase pointer by 1.
-      if (size - inputPosition) >= 2 and view.slice(inputPosition, inputPosition) == "//":
+      if (size - inputPosition) >= 2 and
+          $view.slice(inputPosition, inputPosition + 2) == "//":
         inputPosition += 2
 
       state = State.SpecialAuthorityIgnoreSlashes
@@ -489,7 +491,7 @@ func parseURLImpl*(
     of State.RelativeSlash:
       # If url is special and c is U+002F (/) or U+0056 (\), then:
       if isSpecial(getSchemeType(url)) and inputPosition != size and
-          view[inputPosition] == '/' or view[inputPosition] == '\\':
+          (view[inputPosition] == '/' or view[inputPosition] == '\\'):
         # Set state to special authority ignore slashes state.
         state = State.SpecialAuthorityIgnoreSlashes
       elif inputPosition != size and view[inputPosition] == '/':
@@ -508,7 +510,7 @@ func parseURLImpl*(
         url.hostname = base.hostname
         url.port = base.port
 
-        state = State.Port
+        state = State.Path
     of State.PathOrAuthority:
       # If c is U+002F (/), then set state to authority state.
       if inputPosition != size and view[inputPosition] == '/':
