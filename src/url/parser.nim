@@ -256,7 +256,7 @@ func parseURLImpl*(
       # then set state to special authority ignore slashes state
       # and increase pointer by 1.
       if (size - inputPosition) >= 2 and
-          $view.slice(inputPosition, inputPosition + 2) == "//":
+          view.slice(inputPosition, inputPosition + 2) == toStringView("//"):
         inputPosition += 2
 
       state = State.SpecialAuthorityIgnoreSlashes
