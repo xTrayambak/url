@@ -447,7 +447,7 @@ func parseURLImpl*(
 
       let locOfQuestionMark = findInsensitive(view, '?')
 
-      if locOfQuestionMark > 0:
+      if locOfQuestionMark >= 0:
         state = State.Query
         view = view.slice(0, cast[uint32](locOfQuestionMark))
         inputPosition += view.len + 1
