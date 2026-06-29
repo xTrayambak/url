@@ -331,7 +331,7 @@ func shortenPath*(path: var string, typ: SchemeType): bool {.inline, raises: [].
   # Remove path's last item, if any.
   let lastDelim = path.rfind('/')
   if lastDelim != -1:
-    path.delete(lastDelim .. lastDelim)
+    path.delete(lastDelim ..< path.len)
     return true
 
   false
