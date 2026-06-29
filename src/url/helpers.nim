@@ -217,7 +217,7 @@ else:
   func findNextHostDelimiterSpecial*(
       view: StringView, location: uint32
   ): uint32 {.inline.} =
-    let str = view.slice(location, view.len - 1)
+    let str = view.slice(location, view.len)
     for pos, c in str:
       if SpecialHostDelimiters[cast[uint8](c)] == 1:
         return cast[uint32](pos) + location
