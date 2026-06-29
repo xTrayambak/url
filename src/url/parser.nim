@@ -204,6 +204,7 @@ func parseURLImpl*(
 
           # Set state to path state and decrease pointer by 1.
           state = State.Path
+          dec inputPosition
 
       inc inputPosition
     of State.Scheme:
@@ -249,6 +250,7 @@ func parseURLImpl*(
         # point in input).
         state = State.NoScheme
         inputPosition = 0
+        continue
 
       inc inputPosition
     of State.SpecialAuthoritySlashes:
@@ -425,8 +427,9 @@ func parseURLImpl*(
         # by 1. We know that (input_position == input_size) is impossible
         # here, because of the previous if-check.
         if view[inputPosition] != '/' and view[inputPosition] != '\\':
-          break
+          continue
 
+        inc inputPosition
         continue
       elif inputPosition != size and view[inputPosition] == '?':
         # Otherwise, if state override is not given and c is U+003F (?),
@@ -443,8 +446,7 @@ func parseURLImpl*(
 
       inc inputPosition
     of State.Path:
-      var view = view.slice(inputPosition + 1, view.len)
-
+      var view = view.slice(inputPosition, view.len)
       let locOfQuestionMark = findInsensitive(view, '?')
 
       if locOfQuestionMark >= 0:

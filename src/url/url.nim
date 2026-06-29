@@ -321,8 +321,7 @@ func consumePreparedPath*(url: URL, input: StringView): string =
     PercentChar = 8
 
   var input = input
-  var path = newStringOfCap(input.len * 2)
-    # Allocate enough memory for the worst case (source: i made it up)
+  var path = url.pathname
 
   let
     special = url.getSchemeType().isSpecial()
@@ -374,23 +373,19 @@ func consumePreparedPath*(url: URL, input: StringView): string =
     while true:
       var newLocation =
         findInsensitive(input.slice(cast[uint32](previousLoc), input.len), '/')
+
       if newLocation == -1:
-        let pathView = input.slice(0'u32, cast[uint32](previousLoc))
+        let pathView = input.slice(cast[uint32](previousLoc), input.len)
+
         if pathView == "..":
-          if path.len < 1:
+          discard shortenPath(path, getSchemeType(url))
+
+          if path.len == 0:
             path = "/"
-            return ensureMove(path)
-
-          if path[path.len - 1] == '/':
-            return ensureMove(path)
-
-          path.setLen(path.rfind('/') + 1)
-          return ensureMove(path)
-
-        path &= '/'
-        if pathView != ".":
+        elif pathView != "." and pathView.len > 0:
+          if path.len == 0 or path[path.len - 1] != '/':
+            path &= '/'
           path &= $pathView
-
         return ensureMove(path)
       else:
         newLocation = previousLoc + newLocation
@@ -399,11 +394,10 @@ func consumePreparedPath*(url: URL, input: StringView): string =
         previousLoc = newLocation + 1
 
         if pathView == "..":
-          let lastDelim = path.rfind('/')
-          if lastDelim != -1:
-            path.delete(lastDelim .. lastDelim)
-        elif pathView != ".":
-          path &= '/'
+          discard shortenPath(path, getSchemeType(url))
+        elif pathView != "." and pathView.len > 0:
+          if path.len == 0 or path[path.len - 1] != '/':
+            path &= '/'
           path &= $pathView
   else:
     let needsPercentEncoding = cast[bool](accumulator and 1)
