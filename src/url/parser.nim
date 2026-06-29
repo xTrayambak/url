@@ -623,7 +623,8 @@ func parseURLImpl*(
           # url's path.
           if base.pathname.len > 0:
             if not isWindowsDriveLetter(view.slice(inputPosition, view.len)):
-              var firstBaseUrlPath = toStringView(base.pathname).slice(1, view.len)
+              var firstBaseUrlPath =
+                toStringView(base.pathname).slice(1, cast[uint32](base.pathname.len))
               let loc = firstBaseUrlPath.findInsensitive('/')
               if loc != -1:
                 resize(firstBaseUrlPath, uint32(loc))

@@ -6,10 +6,9 @@ import pkg/[shakar, jsony, results, url]
 
 type
   TestEntry = object
-    # whoever wrote this should never be allowed to write
-    # standards tests again. this is actually painful.
     input: string
     base: Option[string]
+    failure: Option[bool]
     href: Option[string]
     origin: Option[string]
     protocol: Option[string]
@@ -17,6 +16,7 @@ type
     password: Option[string]
     host: Option[string]
     hostname: Option[string]
+
     port: Option[string]
     pathname: Option[string]
     search: Option[string]
@@ -24,100 +24,172 @@ type
 
   TestData = seq[JsonNode]
 
+  FieldMismatch = object
+    field: string
+    expected: string
+    got: string
+
+  TestResult = object
+    ok: bool
+    mismatches: seq[FieldMismatch]
+
 func parseTestData(source: string): TestData =
   fromJson(source, TestData)
 
-proc runTest*(test: TestEntry): bool =
-  template mismatch(msg: string, expected, got: string) =
-    stdout.styledWrite(
-      msg, " (expected: ", fgBlue, expected, resetStyle, "; got: ", styleBright, fgRed,
-      got, resetStyle, ") ",
-    )
+func expectedFailure(test: TestEntry): bool =
+  *test.failure and &test.failure
 
-  template wrap(s: string): Option[string] =
-    if s.len > 0:
-      some(s)
+func asString(s: string): string =
+  s
+
+func asString(s: Option[string]): string =
+  if *s:
+    &s
+  else:
+    newString(0)
+
+func asPort(p: Option[uint16]): string =
+  if *p:
+    $(&p)
+  else:
+    newString(0)
+
+func asPort(p: string): string =
+  p
+
+func withPrefix(s: string, prefix: char): string =
+  if s.len == 0:
+    ""
+  elif s[0] == prefix:
+    s
+  else:
+    $prefix & s
+
+func asSearch(s: string): string =
+  s.withPrefix('?')
+
+func asSearch(s: Option[string]): string =
+  if *s:
+    withPrefix(&s, '?')
+  else:
+    ""
+
+func asHash(s: string): string =
+  s.withPrefix('#')
+
+func asHash(s: Option[string]): string =
+  if *s:
+    withPrefix(&s, '#')
+  else:
+    newString(0)
+
+proc actualOrigin(u: URL): string =
+  let protocol = u.protocol.asString
+
+  case protocol
+  of "http:", "https:", "ws:", "wss:", "ftp:":
+    let host = u.host.asString
+    if host.len == 0:
+      return "null"
+
+    return protocol[0 .. ^2] & "://" & host
+  of "blob:":
+    let inner = tryParseURL(u.pathname.asString)
+
+    if !inner:
+      return "null"
+
+    let innerUrl = &inner
+
+    case innerUrl.protocol.asString
+    of "http:", "https:", "file:":
+      return actualOrigin(innerUrl)
     else:
-      none(string)
+      return "null"
+  else:
+    return "null"
 
-  template wrap(o: Option[string]): Option[string] =
-    if !o:
-      return some("")
+proc addMismatch(
+    mismatches: var seq[FieldMismatch], field: string, expected: string, got: string
+) =
+  if expected != got:
+    mismatches &= FieldMismatch(field: field, expected: expected, got: got)
 
-  let parsed = tryParseURL(
-    test.input,
-    baseUrl =
-      if *test.base:
-        some(parseURL(&test.base))
-      else:
-        none(URL),
-  )
+proc compareExpected(
+    mismatches: var seq[FieldMismatch],
+    field: string,
+    expected: Option[string],
+    got: string,
+) =
+  if *expected:
+    mismatches.addMismatch(field, expected.get, got)
+
+proc evaluateTest*(test: TestEntry): TestResult =
+  let shouldFail = test.expectedFailure
+
+  var baseUrl = none(URL)
+
+  if *test.base:
+    let parsedBase = tryParseURL(test.base.get)
+
+    if !parsedBase:
+      result.mismatches &=
+        FieldMismatch(field: "base", expected: "valid base URL", got: $parsedBase.error)
+      return
+
+    baseUrl = some(&parsedBase)
+
+  let parsed = tryParseURL(test.input, baseUrl = baseUrl)
+
+  if shouldFail:
+    if !parsed:
+      result.ok = true
+      return
+
+    result.mismatches &=
+      FieldMismatch(field: "parse", expected: "failure", got: (&parsed).href.asString)
+    return
+
+  if !test.href:
+    result.mismatches &=
+      FieldMismatch(field: "fixture", expected: "href or failure", got: "missing href")
+    return
 
   if !parsed:
-    stdout.styledWrite("parsing error: " & $parsed.error & ' ')
-    return false
+    result.mismatches &=
+      FieldMismatch(field: "parse", expected: "success", got: $parsed.error)
+    return
 
-  let
-    obj = &parsed
-    href = obj.href.wrap
-    origin = serialize(obj, excludeFragment = true)
-    protocol = obj.protocol.wrap
-    username = obj.username.wrap
-    password = obj.password.wrap
-    host = obj.host
-    hostname = obj.hostname
-    port = obj.port
-    pathname = obj.pathname
-    search = obj.query
-    hash = obj.fragment
+  let obj = &parsed
 
-  if href != test.href:
-    mismatch "href", $test.href, $href
-    return false
+  result.mismatches.compareExpected("href", test.href, obj.href.asString)
+  result.mismatches.compareExpected("origin", test.origin, obj.actualOrigin)
+  result.mismatches.compareExpected("protocol", test.protocol, obj.protocol.asString)
+  result.mismatches.compareExpected("username", test.username, obj.username.asString)
+  result.mismatches.compareExpected("password", test.password, obj.password.asString)
+  result.mismatches.compareExpected("host", test.host, obj.host.asString)
+  result.mismatches.compareExpected("hostname", test.hostname, obj.hostname.asString)
+  result.mismatches.compareExpected("port", test.port, obj.port.asPort)
+  result.mismatches.compareExpected("pathname", test.pathname, obj.pathname.asString)
+  result.mismatches.compareExpected("search", test.search, obj.query.asSearch)
+  result.mismatches.compareExpected("hash", test.hash, obj.fragment.asHash)
 
-  if *test.origin and origin != &test.origin:
-    mismatch "origin", &test.origin, origin
-    return false
+  result.ok = result.mismatches.len == 0
 
-  if protocol != test.protocol:
-    mismatch "protocol", $test.protocol, $protocol
-    return false
+func testCount(data: TestData): int =
+  for item in data:
+    if item.kind == JObject:
+      inc result
 
-  if username != test.username:
-    mismatch "username", $test.username, $username
-    return false
+proc writeMismatch(mismatch: FieldMismatch) =
+  stdout.styledWrite(
+    mismatch.field, " (expected: ", fgBlue, mismatch.expected, resetStyle, "; got: ",
+    styleBright, fgRed, mismatch.got, resetStyle, ")",
+  )
 
-  if password != test.password:
-    mismatch "password", $test.password, $password
-    return false
+proc runTestData(data: TestData): int =
+  let total = data.testCount
 
-  if *test.host and host != &test.host:
-    mismatch "host", $test.host, $host
-    return false
-
-  if hostname != test.hostname:
-    mismatch "hostname", $test.hostname, $hostname
-    return false
-
-  if *test.port and (!port or &port != uint16(parseUint(&test.port))):
-    mismatch "port", $test.port, $port
-    return false
-
-  if *test.pathname and pathname != &test.pathname:
-    mismatch "pathname", $(&test.pathname), pathname
-    return false
-
-  if *test.search and search != test.search:
-    mismatch "search", &test.search, $search
-    return false
-
-  if *test.hash and hash != test.hash:
-    mismatch "hash", &test.hash, $hash
-    return false
-
-  return true
-
-proc runTestData(data: TestData) =
   styledWriteLine(
     stdout,
     styleBright,
@@ -126,38 +198,49 @@ proc runTestData(data: TestData) =
     resetStyle,
     "Running ",
     fgGreen,
-    $data.len,
+    $total,
     resetStyle,
     " tests",
   )
 
-  var testName = "Unnamed Test"
-  var passingTests: uint16
-  for i, item in data:
-    if item.kind == JString:
-      testName =
-        item.getStr().strip(leading = true, trailing = false, chars = {'#', ' '})
-    else:
-      stdout.styledWrite(
-        fgBlue,
-        $i,
-        resetStyle,
-        ": ",
-        fgBlack,
-        bgYellow,
-        item["input"].getStr().repr,
-        resetStyle,
-        ": ",
-      )
-      if runTest(item.to(TestEntry)):
-        stdout.styledWrite(fgBlack, bgGreen, "SUCCESS", resetStyle)
-        stdout.write('\n')
-        inc passingTests
-      else:
-        stdout.styledWrite(fgBlack, bgRed, "FAIL", resetStyle)
-        stdout.write('\n')
+  var passingTests = 0
+  var failingTests = 0
+  var testIndex = 0
 
-  let failingTests = uint16(data.len) - passingTests
+  for item in data:
+    if item.kind != JObject:
+      continue
+
+    inc testIndex
+
+    let test = item.to(TestEntry)
+
+    stdout.styledWrite(
+      fgBlue,
+      $testIndex,
+      resetStyle,
+      ": ",
+      fgBlack,
+      bgYellow,
+      test.input.repr,
+      resetStyle,
+      ": ",
+    )
+
+    let evaluation = evaluateTest(test)
+
+    if evaluation.ok:
+      stdout.styledWrite(fgBlack, bgGreen, "SUCCESS", resetStyle)
+      stdout.write('\n')
+      inc passingTests
+    else:
+      for mismatch in evaluation.mismatches:
+        mismatch.writeMismatch
+
+      stdout.styledWrite(fgBlack, bgRed, "FAIL", resetStyle)
+      stdout.write('\n')
+      inc failingTests
+
   stdout.styledWriteLine(
     styleBright,
     fgWhite,
@@ -169,9 +252,10 @@ proc runTestData(data: TestData) =
     resetStyle,
     " / ",
     fgBlue,
-    $data.len,
+    $total,
     resetStyle,
   )
+
   stdout.styledWriteLine(
     styleBright,
     "Failing",
@@ -182,13 +266,18 @@ proc runTestData(data: TestData) =
     resetStyle,
     " / ",
     fgBlue,
-    $data.len,
+    $total,
     resetStyle,
   )
 
-proc main() {.inline.} =
-  let data = parseTestData(readFile("tests/wpt/url/resources/urltestdata.json"))
-  runTestData(data)
+  failingTests
+
+proc main() =
+  let data = parseTestData(readFile("wpt/urltestdata.json"))
+  let failingTests = runTestData(data)
+
+  if failingTests != 0:
+    quit(1)
 
 when isMainModule:
   main()

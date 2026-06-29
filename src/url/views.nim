@@ -81,7 +81,8 @@ template beyond*(view: StringView, offset: uint32): StringView =
 
 func slice*(view: StringView, start: uint32, stop: uint32): StringView =
   when not defined(danger):
-    assert stop >= start and stop <= view.len, "start: " & $start & "; stop: " & $stop
+    assert stop >= start and stop <= view.len,
+      "start: " & $start & "; stop: " & $stop & "; len: " & $view.len
 
   #debugecho "start: " & $start & ", stop: " & $stop & ", osize: " & $view.len &
   #  ", target: 0x" & $cast[uint64](view.data).toHex
@@ -167,9 +168,6 @@ func toStringView*(data: ptr char, size: uint32): StringView {.inline.} =
 
 func toStringView*(str: string): StringView {.inline.} =
   let size = uint32(len(str))
-
-  when not defined(danger):
-    assert(size != 0)
 
   StringView(
     data:
