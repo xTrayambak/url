@@ -31,3 +31,6 @@ jobs:
 
       - name: Run test suite (NEON)
         run: nimble test
+
+      - name: Run test suite (Scalar)
+        run: echo "-d:nimUrlNoSimd" > nim.cfg && nimble test

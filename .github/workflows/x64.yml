@@ -48,3 +48,6 @@ jobs:
 
       - name: Run test suite (AVX2)
         run: echo -e "-d:avx2" > nim.cfg && nimble test
+
+      - name: Run test suite (Scalar)
+        run: echo "-d:nimUrlNoSimd" > nim.cfg && nimble test
