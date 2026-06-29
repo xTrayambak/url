@@ -13,7 +13,7 @@ jobs:
           path: .nim_runtime
           key: ${{ runner.os }}-nimble-arm64-${{ hashFiles('*.nimble') }}
           restore-keys: |
-            ${{ runner.os }}-nimble-
+            ${{ runner.os }}-nimble-${{ runner.arch }}-
        
       - name: Setup Nim
         if: steps.cache-nim.outputs.cache-hit != 'true'
@@ -29,5 +29,5 @@ jobs:
       - name: Install nim-url
         run: nimble install -y
 
-      - name: Run test suite
+      - name: Run test suite (NEON)
         run: nimble test

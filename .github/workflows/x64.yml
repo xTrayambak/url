@@ -13,7 +13,7 @@ jobs:
           path: .nim_runtime
           key: ${{ runner.os }}-nimble-x64-${{ hashFiles('*.nimble') }}
           restore-keys: |
-            ${{ runner.os }}-nimble-
+            ${{ runner.os }}-nimble-${{ runner.arch }}-
        
       - name: Setup Nim
         if: steps.cache-nim.outputs.cache-hit != 'true'
@@ -21,6 +21,14 @@ jobs:
         with:
           nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache nimble packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nim_runtime/bin
+          key: ${{ runner.os }}-nimble-${{ runner.arch }}-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-nimble-${{ runner.arch }}-
 
       - name: Ensure Nim is in PATH
         run: |
