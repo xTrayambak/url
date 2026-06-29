@@ -452,7 +452,7 @@ func parseURLImpl*(
       if locOfQuestionMark >= 0:
         state = State.Query
         view = view.slice(0, cast[uint32](locOfQuestionMark))
-        inputPosition += view.len + 1
+        inputPosition += view.len
       else:
         inputPosition = size + 1
 
@@ -512,7 +512,6 @@ func parseURLImpl*(
         url.hostname = base.hostname
         url.port = base.port
 
-        dec inputPosition
         state = State.Path
     of State.PathOrAuthority:
       # If c is U+002F (/), then set state to authority state.
@@ -672,6 +671,9 @@ func parseURLImpl*(
         state = State.PathStart
     else:
       break
+
+  if isSpecial(url.getSchemeType()) and url.pathname.len < 1:
+    url.pathname = "/"
 
   if *fragment:
     url.fragment = fragment
