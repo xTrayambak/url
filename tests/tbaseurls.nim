@@ -4,7 +4,6 @@ import pkg/[shakar, url]
 suite "base URLs":
   let b0 = parseURL("https://example.com/a/b/c/d.html")
   let b1 = parseURL("https://thing.app/blog/2ndbirthday/index.html")
-  print b0
 
   test "path shortening":
     let

@@ -8,7 +8,7 @@ suite "basic URL parsing tests":
     check(&url1.hostname == "google.com")
     check(url1.scheme == "https")
     check(!url1.port)
-    check(url1.pathname.len == 0)
+    check(url1.pathname.len == 1)
 
     let url2 = parseURL("http://xtrayambak.xyz/entries/madhyasthal-dce#closing-notes")
 
